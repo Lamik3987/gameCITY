@@ -4,7 +4,7 @@
 */
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree, ThreeElements } from '@react-three/fiber';
-import { MapControls, Environment, SoftShadows, Instance, Instances, Float, useTexture, Outlines, OrthographicCamera, Html } from '@react-three/drei';
+import { MapControls, Environment, SoftShadows, Instance, Instances, Float, useTexture, Outlines, OrthographicCamera, Html, Grid as DreiGrid } from '@react-three/drei';
 import * as THREE from 'three';
 import { MathUtils } from 'three';
 import { Grid, BuildingType, TileData, CityStats, BuildingCategory, FloatingTextData } from '../types';
@@ -2303,7 +2303,16 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
 
           <GroundInstances grid={grid} hoveredTool={hoveredTool} />
           {hoveredTool !== null && hoveredTool !== BuildingType.BuyLand && hoveredTool !== BuildingType.None && (
-             <gridHelper args={[GRID_SIZE, GRID_SIZE, '#000000', '#000000']} position={[0, -0.279, 0]} />
+             <DreiGrid 
+               position={[0, -0.279, 0]} 
+               args={[GRID_SIZE, GRID_SIZE]} 
+               cellSize={1} 
+               cellThickness={1} 
+               cellColor="#000000" 
+               sectionSize={0}
+               fadeDistance={100}
+               infiniteGrid={false}
+             />
           )}
           {useMemo(() => {
              const elements = [];

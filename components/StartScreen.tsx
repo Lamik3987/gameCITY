@@ -30,7 +30,6 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
             Начать строительство
             </button>
 
-            </div>
         </div>
       </div>
     </div>

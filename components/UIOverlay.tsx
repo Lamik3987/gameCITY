@@ -128,6 +128,11 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
     if (currentTutorial) {
       if (currentTutorial.highlightArea === area) {
          return "z-[100] relative ring-4 ring-yellow-400 bg-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300 pointer-events-auto animate-pulse";
+      } else if (area === 'toolbar' && currentTutorial.highlightArea.startsWith('toolbar')) {
+         // Elevate the entire toolbar if any tool or category inside it is highlighted
+         return "z-[50] relative transition-all duration-300 pointer-events-none";
+      } else if (area === 'top-buttons' && currentTutorial.highlightArea.startsWith('top-buttons')) {
+         return "z-[50] relative transition-all duration-300 pointer-events-none";
       } else {
          return "pointer-events-none transition-all duration-300";
       }

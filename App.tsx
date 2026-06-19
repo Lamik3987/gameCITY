@@ -40,7 +40,9 @@ function App() {
     level: 1,
     timeOfDay: 0,
     happiness: 50,
+    happiness: 50,
     upgrades: { taxBoost: 0, roadDiscount: 0, parkBoost: 0 },
+    tutorialStep: 1,
     tutorialCompleted: false
   });
   const [selectedTool, setSelectedTool] = useState<BuildingType | null>(null);
@@ -139,7 +141,11 @@ function App() {
                }));
            }
 
-           setStats({ ...parsed.stats, tutorialCompleted: parsed.stats.tutorialCompleted || false });
+           setStats({ 
+              ...parsed.stats, 
+              tutorialCompleted: parsed.stats.tutorialCompleted || false,
+              tutorialStep: parsed.stats.tutorialStep ?? (parsed.stats.tutorialCompleted ? 0 : 1) 
+           });
            setGrid(loadedGrid);
         }
       } catch (e) {
@@ -439,6 +445,10 @@ function App() {
     if (tool === BuildingType.BuyLand) {
        if (!currentTile.unlocked) {
           unlockChunk(x, y);
+          if (currentStats.tutorialStep === 4) {
+              setStats(prev => ({ ...prev, tutorialStep: 5 }));
+              setSelectedTool(null);
+          }
        }
        return;
     }
@@ -501,6 +511,37 @@ function App() {
         return;
     }
 
+    // Road 3x3 restriction logic
+    if (tool === BuildingType.Road) {
+        let forms3x3 = false;
+        for (let cy = y - 2; cy <= y; cy++) {
+            for (let cx = x - 2; cx <= x; cx++) {
+                let allRoads = true;
+                for (let dy = 0; dy < 3; dy++) {
+                    for (let dx = 0; dx < 3; dx++) {
+                        const checkX = cx + dx;
+                        const checkY = cy + dy;
+                        if (checkX < 0 || checkX >= GRID_SIZE || checkY < 0 || checkY >= GRID_SIZE) {
+                            allRoads = false; break;
+                        }
+                        if (checkX !== x || checkY !== y) {
+                            if (currentGrid[checkY][checkX].buildingType !== BuildingType.Road) {
+                                allRoads = false; break;
+                            }
+                        }
+                    }
+                    if (!allRoads) break;
+                }
+                if (allRoads) { forms3x3 = true; break; }
+            }
+            if (forms3x3) break;
+        }
+        if (forms3x3) {
+            addNewsItem({id: Date.now().toString() + Math.random(), text: `Максимальная ширина дороги - 2 полосы!`, type: 'negative'});
+            return;
+        }
+    }
+
     // Check space
     let canPlace = true;
     for (let dy = 0; dy < bHeight; dy++) {
@@ -533,6 +574,20 @@ function App() {
            }
         }
         setGrid(newGrid);
+
+        // Tutorial Progression
+        if (currentStats.tutorialStep > 0) {
+            if (currentStats.tutorialStep === 1 && tool === BuildingType.Road) {
+                setStats(prev => ({ ...prev, tutorialStep: 2 }));
+                setSelectedTool(null);
+            } else if (currentStats.tutorialStep === 2 && tool === BuildingType.Residential) {
+                setStats(prev => ({ ...prev, tutorialStep: 3 }));
+                setSelectedTool(null);
+            } else if (currentStats.tutorialStep === 3 && tool === BuildingType.Industrial) {
+                setStats(prev => ({ ...prev, tutorialStep: 4 }));
+                setSelectedTool(null);
+            }
+        }
       } else {
         addNewsItem({id: Date.now().toString() + Math.random(), text: `В казне недостаточно средств: ${buildingConfig.name}.`, type: 'negative'});
         triggerMoneyError();

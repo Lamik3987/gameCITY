@@ -1534,35 +1534,60 @@ case BuildingType.FactoryLarge:
 const carColors = ['#ef4444', '#3b82f6', '#eab308', '#ffffff', '#1f2937', '#f97316'];
 
 const TrafficSystem = ({ grid }: { grid: Grid }) => {
-  const roadTiles = useMemo(() => {
+  const roadTilesInfo = useMemo(() => {
+    const info = new Map<string, { topH: boolean, botH: boolean, leftV: boolean, rightV: boolean, connections: number, hasUp: boolean, hasDown: boolean, hasLeft: boolean, hasRight: boolean }>();
     const roads: {x: number, y: number}[] = [];
+    
     grid.forEach(row => row.forEach(tile => {
       if (tile.buildingType === BuildingType.Road) roads.push({x: tile.x, y: tile.y});
     }));
-    return roads;
+
+    roads.forEach(r => {
+        const x = r.x, y = r.y;
+        const hasUp = y > 0 && grid[y - 1][x].buildingType === BuildingType.Road;
+        const hasDown = y < GRID_SIZE - 1 && grid[y + 1][x].buildingType === BuildingType.Road;
+        const hasLeft = x > 0 && grid[y][x - 1].buildingType === BuildingType.Road;
+        const hasRight = x < GRID_SIZE - 1 && grid[y][x + 1].buildingType === BuildingType.Road;
+
+        const hasUpLeft = y > 0 && x > 0 && grid[y - 1][x - 1].buildingType === BuildingType.Road;
+        const hasUpRight = y > 0 && x < GRID_SIZE - 1 && grid[y - 1][x + 1].buildingType === BuildingType.Road;
+        const hasDownLeft = y < GRID_SIZE - 1 && x > 0 && grid[y + 1][x - 1].buildingType === BuildingType.Road;
+        const hasDownRight = y < GRID_SIZE - 1 && x < GRID_SIZE - 1 && grid[y + 1][x + 1].buildingType === BuildingType.Road;
+
+        const isTopLaneH = hasDown && ((hasLeft && hasDownLeft) || (hasRight && hasDownRight));
+        const isBottomLaneH = hasUp && ((hasLeft && hasUpLeft) || (hasRight && hasUpRight));
+        const isLeftLaneV = hasRight && ((hasUp && hasUpRight) || (hasDown && hasDownRight));
+        const isRightLaneV = hasLeft && ((hasUp && hasUpLeft) || (hasDown && hasDownLeft));
+        const connections = [hasUp, hasDown, hasLeft, hasRight].filter(Boolean).length;
+
+        info.set(`${x},${y}`, { topH: isTopLaneH, botH: isBottomLaneH, leftV: isLeftLaneV, rightV: isRightLaneV, connections, hasUp, hasDown, hasLeft, hasRight });
+    });
+
+    return { roads, info };
   }, [grid]);
 
   const isMobile = window.innerWidth <= 768;
-  const maxCars = isMobile ? 3 : 6;
-  const carCount = Math.min(Math.floor(roadTiles.length * 0.15), maxCars);
+  const maxCars = isMobile ? 4 : 10;
+  const carCount = Math.min(Math.floor(roadTilesInfo.roads.length * 0.15), maxCars);
   const carsRef = useRef<THREE.InstancedMesh>(null);
   const carsState = useRef<Float32Array>(new Float32Array(0)); 
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const colors = useMemo(() => new Float32Array(0), []);
 
   useEffect(() => {
-    if (roadTiles.length < 2) return;
-    carsState.current = new Float32Array(carCount * 6);
+    if (roadTilesInfo.roads.length < 2) return;
+    carsState.current = new Float32Array(carCount * 8);
     const newColors = new Float32Array(carCount * 3);
 
     for (let i = 0; i < carCount; i++) {
-      const startNode = roadTiles[Math.floor(Math.random() * roadTiles.length)];
-      carsState.current[i*6 + 0] = startNode.x;
-      carsState.current[i*6 + 1] = startNode.y;
-      carsState.current[i*6 + 2] = startNode.x;
-      carsState.current[i*6 + 3] = startNode.y;
-      carsState.current[i*6 + 4] = 1; // force pick new target
-      carsState.current[i*6 + 5] = getRandomRange(0.01, 0.03); // speed
+      const startNode = roadTilesInfo.roads[Math.floor(Math.random() * roadTilesInfo.roads.length)];
+      carsState.current[i*8 + 0] = startNode.x; // curX
+      carsState.current[i*8 + 1] = startNode.y; // curY
+      carsState.current[i*8 + 2] = startNode.x; // tarX
+      carsState.current[i*8 + 3] = startNode.y; // tarY
+      carsState.current[i*8 + 4] = 1; // progress (force new target)
+      carsState.current[i*8 + 5] = getRandomRange(0.015, 0.025); // base speed
+      carsState.current[i*8 + 6] = startNode.x; // prevX
+      carsState.current[i*8 + 7] = startNode.y; // prevY
 
       const color = new THREE.Color(carColors[Math.floor(Math.random() * carColors.length)]);
       newColors[i*3] = color.r; newColors[i*3+1] = color.g; newColors[i*3+2] = color.b;
@@ -1571,47 +1596,89 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
     if (carsRef.current) {
         carsRef.current.instanceColor = new THREE.InstancedBufferAttribute(newColors, 3);
     }
-  }, [roadTiles, carCount]);
+  }, [roadTilesInfo, carCount]);
 
   useFrame(() => {
-    if (!carsRef.current || roadTiles.length < 2 || carsState.current.length === 0) return;
+    if (!carsRef.current || roadTilesInfo.roads.length < 2 || carsState.current.length === 0) return;
 
     for (let i = 0; i < carCount; i++) {
-      const idx = i * 6;
+      const idx = i * 8;
       let curX = carsState.current[idx];
       let curY = carsState.current[idx+1];
       let tarX = carsState.current[idx+2];
       let tarY = carsState.current[idx+3];
       let progress = carsState.current[idx+4];
-      const speed = carsState.current[idx+5];
+      const baseSpeed = carsState.current[idx+5];
+      let prevX = carsState.current[idx+6];
+      let prevY = carsState.current[idx+7];
 
-      progress += speed;
+      // Collision avoidance (Distance Check)
+      let speedMult = 1;
+      const mx = MathUtils.lerp(curX, tarX, progress);
+      const my = MathUtils.lerp(curY, tarY, progress);
+      const dx = tarX - curX;
+      const dy = tarY - curY;
+      const len = Math.sqrt(dx*dx + dy*dy) || 1;
+      const ndx = dx / len;
+      const ndy = dy / len;
+
+      for (let j = 0; j < carCount; j++) {
+          if (i === j) continue;
+          const oIdx = j * 8;
+          const ox = MathUtils.lerp(carsState.current[oIdx], carsState.current[oIdx+2], carsState.current[oIdx+4]);
+          const oy = MathUtils.lerp(carsState.current[oIdx+1], carsState.current[oIdx+3], carsState.current[oIdx+4]);
+          
+          const ddx = ox - mx;
+          const ddy = oy - my;
+          const dist = Math.sqrt(ddx*ddx + ddy*ddy);
+          
+          // Check if car J is in front of car I (dot product > 0)
+          const dot = ddx * ndx + ddy * ndy;
+          if (dot > 0 && dist < 0.6) {
+              speedMult = Math.min(speedMult, Math.max(0, (dist - 0.25) / 0.35));
+          }
+      }
+
+      progress += baseSpeed * speedMult;
 
       if (progress >= 1) {
+        prevX = curX;
+        prevY = curY;
         curX = tarX;
         curY = tarY;
         progress = 0;
         
-        const neighbors = roadTiles.filter(t => 
-          (Math.abs(t.x - curX) === 1 && t.y === curY) || 
-          (Math.abs(t.y - curY) === 1 && t.x === curX)
-        );
-
-        if (neighbors.length > 0) {
-            // Simple pathfinding: avoid going back immediately
-            const valid = neighbors.length > 1 
-                ? neighbors.filter(n => Math.abs(n.x - carsState.current[idx]) > 0.1 || Math.abs(n.y - carsState.current[idx+1]) > 0.1)
-                : neighbors;
-            
-            const next = valid.length > 0 
-                ? valid[Math.floor(Math.random() * valid.length)]
-                : neighbors[0];
-            
-            tarX = next.x;
-            tarY = next.y;
-        } else {
-            const rnd = roadTiles[Math.floor(Math.random() * roadTiles.length)];
-            curX = rnd.x; curY = rnd.y; tarX = rnd.x; tarY = rnd.y;
+        const tileInfo = roadTilesInfo.info.get(`${curX},${curY}`);
+        if (tileInfo) {
+            if (tileInfo.connections === 1) {
+                // Dead end U-turn
+                tarX = prevX; tarY = prevY;
+            } else {
+                const candidates = [];
+                if (tileInfo.hasRight && !(curX+1 === prevX && curY === prevY)) {
+                    const t = roadTilesInfo.info.get(`${curX+1},${curY}`);
+                    if (t && !t.botH) candidates.push({x: curX+1, y: curY});
+                }
+                if (tileInfo.hasLeft && !(curX-1 === prevX && curY === prevY)) {
+                    const t = roadTilesInfo.info.get(`${curX-1},${curY}`);
+                    if (t && !t.topH) candidates.push({x: curX-1, y: curY});
+                }
+                if (tileInfo.hasDown && !(curX === prevX && curY+1 === prevY)) {
+                    const t = roadTilesInfo.info.get(`${curX},${curY+1}`);
+                    if (t && !t.rightV) candidates.push({x: curX, y: curY+1});
+                }
+                if (tileInfo.hasUp && !(curX === prevX && curY-1 === prevY)) {
+                    const t = roadTilesInfo.info.get(`${curX},${curY-1}`);
+                    if (t && !t.leftV) candidates.push({x: curX, y: curY-1});
+                }
+                
+                if (candidates.length > 0) {
+                    const next = candidates[Math.floor(Math.random() * candidates.length)];
+                    tarX = next.x; tarY = next.y;
+                } else {
+                    tarX = prevX; tarY = prevY; // U-turn as fallback
+                }
+            }
         }
       }
 
@@ -1620,29 +1687,21 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
       carsState.current[idx+2] = tarX;
       carsState.current[idx+3] = tarY;
       carsState.current[idx+4] = progress;
+      carsState.current[idx+6] = prevX;
+      carsState.current[idx+7] = prevY;
 
-      // Interpolate position
       const gx = MathUtils.lerp(curX, tarX, progress);
       const gy = MathUtils.lerp(curY, tarY, progress);
-
-      // Determine driving side offset
-      const dx = tarX - curX;
-      const dy = tarY - curY;
-      const angle = Math.atan2(dy, dx);
+      const angle = Math.atan2(tarY - curY, tarX - curX);
       
-      // Offset to right side relative to movement
       const offsetAmt = 0.15;
-      // Normals: (-dy, dx)
-      const len = Math.sqrt(dx*dx + dy*dy) || 1;
-      const offX = (-dy/len) * offsetAmt;
-      const offY = (dx/len) * offsetAmt;
+      const offX = (-ndy) * offsetAmt;
+      const offY = (ndx) * offsetAmt;
 
       const [wx, _, wz] = gridToWorld(gx + offX, gy + offY);
 
-      // Road surface is approx -0.3. Car height 0.15.
       dummy.position.set(wx, -0.3 + 0.075, wz);
       dummy.rotation.set(0, -angle, 0);
-      // Car dimensions (Length(X), Height(Y), Width(Z) assuming 0 rotation aligns with X)
       dummy.scale.set(0.5, 0.15, 0.3); 
       
       dummy.updateMatrix();
@@ -1651,7 +1710,7 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
     carsRef.current.instanceMatrix.needsUpdate = true;
   });
 
-  if (roadTiles.length < 2) return null;
+  if (roadTilesInfo.roads.length < 2) return null;
 
   return (
     <instancedMesh ref={carsRef} args={[boxGeo, undefined, carCount]} castShadow={false}>
@@ -1925,7 +1984,6 @@ const CameraController = () => {
             ctrl.target.x = THREE.MathUtils.clamp(ctrl.target.x, -panLimit, panLimit);
             ctrl.target.z = THREE.MathUtils.clamp(ctrl.target.z, -panLimit, panLimit);
 
-            // Prevent tilting too low
             if (z < 15) {
                 ctrl.maxPolarAngle = Math.PI / 3.5; 
             } else {
@@ -1941,36 +1999,64 @@ const CameraController = () => {
 // --- 3. Main Map Component ---
 
 const RoadMarkings = React.memo(({ x, y, grid, yOffset }: { x: number; y: number; grid: Grid; yOffset: number }) => {
-  const lineMaterial = useMemo(() => new THREE.MeshStandardMaterial({ color: '#fbbf24' }), []);
-  const lineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 0.5), []);
+  const lineMaterial = useMemo(() => new THREE.MeshStandardMaterial({ color: '#fbbf24', roughness: 0.8 }), []);
+  const lineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 1), []); // Full length line
+  const halfLineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 0.5), []);
+  const uTurnGeo = useMemo(() => new THREE.RingGeometry(0.2, 0.3, 16, 1, 0, Math.PI), []);
 
   const hasUp = y > 0 && grid[y - 1][x].buildingType === BuildingType.Road;
   const hasDown = y < GRID_SIZE - 1 && grid[y + 1][x].buildingType === BuildingType.Road;
   const hasLeft = x > 0 && grid[y][x - 1].buildingType === BuildingType.Road;
   const hasRight = x < GRID_SIZE - 1 && grid[y][x + 1].buildingType === BuildingType.Road;
 
+  const hasUpLeft = y > 0 && x > 0 && grid[y - 1][x - 1].buildingType === BuildingType.Road;
+  const hasUpRight = y > 0 && x < GRID_SIZE - 1 && grid[y - 1][x + 1].buildingType === BuildingType.Road;
+  const hasDownLeft = y < GRID_SIZE - 1 && x > 0 && grid[y + 1][x - 1].buildingType === BuildingType.Road;
+  const hasDownRight = y < GRID_SIZE - 1 && x < GRID_SIZE - 1 && grid[y + 1][x + 1].buildingType === BuildingType.Road;
+
+  // 2-lane detection
+  const isTopLaneH = hasDown && ((hasLeft && hasDownLeft) || (hasRight && hasDownRight));
+  const isBottomLaneH = hasUp && ((hasLeft && hasUpLeft) || (hasRight && hasUpRight));
+  const isLeftLaneV = hasRight && ((hasUp && hasUpRight) || (hasDown && hasDownRight));
+  const isRightLaneV = hasLeft && ((hasUp && hasUpLeft) || (hasDown && hasDownLeft));
+
+  const isIntersection = (isTopLaneH || isBottomLaneH) && (isLeftLaneV || isRightLaneV);
   const connections = [hasUp, hasDown, hasLeft, hasRight].filter(Boolean).length;
-  
-  // Isolated road piece: draw a default line
-  if (connections === 0) {
-    return (
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, yOffset, 0]} geometry={lineGeo} material={lineMaterial} />
-    );
-  }
+  const isDeadEnd = connections === 1;
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, yOffset, 0]}>
-      {/* Center point for junctions to fill the gap, lifted slightly to avoid z-fighting */}
-      {(hasUp || hasDown) && (hasLeft || hasRight) && (
-        <mesh position={[0, 0, 0.005]} material={lineMaterial}>
-           <planeGeometry args={[0.12, 0.12]} />
-        </mesh>
+      {!isIntersection && isTopLaneH && (
+         <mesh position={[0, 0.5, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />
+      )}
+      {!isIntersection && isLeftLaneV && (
+         <mesh position={[0.5, 0, 0]} geometry={lineGeo} material={lineMaterial} />
       )}
 
-      {hasUp && <mesh position={[0, 0.25, 0]} geometry={lineGeo} material={lineMaterial} />}
-      {hasDown && <mesh position={[0, -0.25, 0]} geometry={lineGeo} material={lineMaterial} />}
-      {hasLeft && <mesh position={[-0.25, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />}
-      {hasRight && <mesh position={[0.25, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />}
+      {/* Regular 1-lane markings */}
+      {!isTopLaneH && !isBottomLaneH && !isLeftLaneV && !isRightLaneV && connections > 1 && (
+        <>
+          {(hasUp || hasDown) && (hasLeft || hasRight) && (
+            <mesh position={[0, 0, 0.005]} material={lineMaterial}>
+               <planeGeometry args={[0.15, 0.15]} />
+            </mesh>
+          )}
+          {hasUp && <mesh position={[0, -0.25, 0]} geometry={halfLineGeo} material={lineMaterial} />}
+          {hasDown && <mesh position={[0, 0.25, 0]} geometry={halfLineGeo} material={lineMaterial} />}
+          {hasLeft && <mesh position={[-0.25, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={halfLineGeo} material={lineMaterial} />}
+          {hasRight && <mesh position={[0.25, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={halfLineGeo} material={lineMaterial} />}
+        </>
+      )}
+
+      {/* Dead End U-Turns */}
+      {isDeadEnd && !isIntersection && (
+        <>
+           {hasUp && <mesh position={[0, 0.1, 0]} rotation={[0, 0, 0]} geometry={uTurnGeo} material={lineMaterial} />}
+           {hasDown && <mesh position={[0, -0.1, 0]} rotation={[0, 0, Math.PI]} geometry={uTurnGeo} material={lineMaterial} />}
+           {hasLeft && <mesh position={[0.1, 0, 0]} rotation={[0, 0, -Math.PI / 2]} geometry={uTurnGeo} material={lineMaterial} />}
+           {hasRight && <mesh position={[-0.1, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={uTurnGeo} material={lineMaterial} />}
+        </>
+      )}
     </group>
   );
 });
@@ -2191,6 +2277,32 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
             canPlacePreview = false;
          }
        }
+     }
+
+     if (canPlacePreview && hoveredTool === BuildingType.Road) {
+        const hx = hoveredTile.x, hy = hoveredTile.y;
+        for (let cy = hy - 2; cy <= hy; cy++) {
+            for (let cx = hx - 2; cx <= hx; cx++) {
+                let allRoads = true;
+                for (let dy = 0; dy < 3; dy++) {
+                    for (let dx = 0; dx < 3; dx++) {
+                        const checkX = cx + dx;
+                        const checkY = cy + dy;
+                        if (checkX < 0 || checkX >= GRID_SIZE || checkY < 0 || checkY >= GRID_SIZE) {
+                            allRoads = false; break;
+                        }
+                        if (checkX !== hx || checkY !== hy) {
+                            if (grid[checkY][checkX].buildingType !== BuildingType.Road) {
+                                allRoads = false; break;
+                            }
+                        }
+                    }
+                    if (!allRoads) break;
+                }
+                if (allRoads) { canPlacePreview = false; break; }
+            }
+            if (!canPlacePreview) break;
+        }
      }
   }
 

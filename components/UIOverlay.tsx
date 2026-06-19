@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { BuildingType, CityStats, NewsItem, BuildingCategory } from '../types';
 import { BUILDINGS } from '../constants';
+import { TutorialManager } from './TutorialManager';
 import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings } from 'lucide-react';
 
 interface UIOverlayProps {
@@ -102,8 +103,23 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const [newsZ, setNewsZ] = useState(10);
   const [activeCategory, setActiveCategory] = useState<BuildingCategory>(BuildingCategory.Infrastructure);
   const [toolbarExpanded, setToolbarExpanded] = useState(true);
-  const [tutorialStep, setTutorialStep] = useState(stats.tutorialCompleted ? 0 : 1);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const tutorialStep = stats.tutorialStep || 0;
+  const currentTutorial = TutorialManager.getStep(tutorialStep);
+
+  const getBtnClass = (actionId: string) => {
+    const blocked = TutorialManager.isUIBlocked(tutorialStep, actionId);
+    return `relative group ${blocked ? 'opacity-30 pointer-events-none' : ''}`;
+  };
+
+  const getOverlayClass = (toolType: BuildingType | string) => {
+      const isTarget = currentTutorial && (currentTutorial.targetTool === toolType || currentTutorial.targetUI === toolType);
+      if (isTarget) {
+          return "absolute inset-0 bg-yellow-400/20 rounded-xl animate-pulse ring-2 ring-yellow-400 pointer-events-none";
+      }
+      return "";
+  };
 
   useEffect(() => {
     if (toastMsg) {
@@ -113,11 +129,9 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   }, [toastMsg]);
 
   const completeTutorial = () => {
-     setTutorialStep(0);
-     setStats(prev => ({ ...prev, tutorialCompleted: true }));
+     setStats(prev => ({ ...prev, tutorialStep: 0, tutorialCompleted: true }));
   };
 
-  // Expose these via window events so App or IsoMap can trigger them
   useEffect(() => {
     const handleToggleSettings = () => setSettingsVisible(v => !v);
     const handleTriggerAd = () => {
@@ -152,7 +166,6 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
     }
   }, [newsFeed, newsMinimized]);
 
-  // Derive tools for active category
   const activeTools = Object.values(BUILDINGS)
      .filter(b => b.category === activeCategory)
      .map(b => b.type);
@@ -160,7 +173,6 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   return (
     <div className="absolute inset-0 pointer-events-none p-2 md:p-4 font-sans z-10 overflow-hidden">
       
-      {/* Top Left Stats (Fixed) */}
       <div className="absolute top-4 left-4 pointer-events-auto flex flex-col gap-2">
         <div className="bg-gray-900/90 text-white p-2 md:p-3 rounded-xl border border-gray-700 shadow-2xl backdrop-blur-md flex gap-3 md:gap-6 items-center w-full md:w-auto">
           <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''}`}>
@@ -184,11 +196,16 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           </div>
         </div>
         
-        {/* Buttons */}
         <div className="flex flex-col gap-2 items-start">
-           <button onClick={() => setUpgradesVisible(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-purple-400/50 transition-transform active:scale-95 text-xs">
-              <ShoppingBag size={14} /> Улучшения
-           </button>
+           <div className={getBtnClass('upgrades')}>
+              <button 
+                onClick={() => setUpgradesVisible(true)}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-purple-400/50 transition-transform active:scale-95 text-xs"
+              >
+                <ShoppingBag size={14} /> Улучшения
+              </button>
+              <div className={getOverlayClass('upgrades')}></div>
+           </div>
            {!newsVisible && (
             <button onClick={() => setNewsVisible(true)} className="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
               <AlertCircle size={14} /> Открыть Новости
@@ -197,58 +214,30 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
       </div>
 
-      {/* Tutorial Modal */}
-      {tutorialStep > 0 && (
-         <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto">
-           <div className="bg-slate-900 border border-indigo-500/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 text-center">
-             <div className="mb-4 flex justify-center">
-                <div className="bg-indigo-500 p-3 rounded-full shadow-lg shadow-indigo-500/30">
-                  <Check className="text-white" size={32} />
+      {/* Dynamic Tutorial Modal */}
+      {currentTutorial && (
+         <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-4 pointer-events-none">
+           <div className="bg-slate-900/95 border-2 border-indigo-500/80 p-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(99,102,241,0.5)] text-center backdrop-blur-sm pointer-events-auto transform animate-bounce-slight">
+             <div className="mb-3 flex justify-center">
+                <div className="bg-indigo-500 p-2 rounded-full shadow-lg shadow-indigo-500/30">
+                  <Check className="text-white" size={24} />
                 </div>
              </div>
              
-             {tutorialStep === 1 && (
-               <>
-                 <h2 className="text-xl font-black text-white mb-2">Добро пожаловать, Мэр!</h2>
-                 <p className="text-sm text-slate-300 mb-6">Это ваш новый участок земли. Здесь вы построите огромный мегаполис! Готовы начать?</p>
-                 <button onClick={() => setTutorialStep(2)} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition-all active:scale-95">Далее</button>
-               </>
-             )}
+             <h2 className="text-lg font-black text-white mb-2">{currentTutorial.title}</h2>
+             <p className="text-sm text-slate-300 mb-4 leading-relaxed">{currentTutorial.text}</p>
              
-             {tutorialStep === 2 && (
-               <>
-                 <h2 className="text-xl font-black text-white mb-2">Время - деньги</h2>
-                 <p className="text-sm text-slate-300 mb-6">Каждый день (каждые пару секунд реального времени) город живет: собираются налоги, а также приезжают новые жители.</p>
-                 <button onClick={() => setTutorialStep(3)} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition-all active:scale-95">Понятно</button>
-               </>
-             )}
-             
-             {tutorialStep === 3 && (
-               <>
-                 <h2 className="text-xl font-black text-white mb-2">Экономика и Здания</h2>
-                 <div className="text-sm text-slate-300 mb-6 text-left space-y-3">
-                   <p><strong className="text-red-400">Жилые дома</strong>: увеличивают население. Больше людей = больше налогов каждый день!</p>
-                   <p><strong className="text-blue-400">Магазины</strong>: стабильно приносят деньги и не вредят городу.</p>
-                   <p><strong className="text-yellow-400">Фабрики</strong>: очень прибыльны, но <strong>снижают счастье жителей</strong>, если построены ближе 4 клеток к домам. Выносите промзоны за город!</p>
-                 </div>
-                 <button onClick={() => setTutorialStep(4)} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-md transition-all active:scale-95">Далее</button>
-               </>
-             )}
-             
-             {tutorialStep === 4 && (
-               <>
-                 <h2 className="text-xl font-black text-white mb-2">Индикаторы</h2>
-                 <p className="text-sm text-slate-300 mb-6">Следите за <strong>Счастьем</strong>! Если оно упадет, жители перестанут к вам переезжать. Повышайте счастье, строя парки. Если не хватает места — покупайте новые кварталы!</p>
-                 <button onClick={completeTutorial} className="w-full bg-green-500 hover:bg-green-400 text-white font-black py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all active:scale-95 text-xl">Начать строить</button>
-               </>
-             )}
-             
-             {/* Progress dots */}
-             <div className="flex justify-center gap-2 mt-6">
-                {[1,2,3,4].map(step => (
-                   <div key={step} className={`w-2 h-2 rounded-full ${tutorialStep === step ? 'bg-indigo-400' : 'bg-slate-700'}`}></div>
-                ))}
+             <div className="bg-slate-800/80 rounded-xl py-3 px-4 border border-slate-700">
+                <p className="text-indigo-300 font-bold text-sm animate-pulse flex items-center justify-center gap-2">
+                   {currentTutorial.actionRequired}
+                </p>
              </div>
+
+             {tutorialStep === 5 && (
+                <button onClick={completeTutorial} className="mt-4 w-full bg-green-500 hover:bg-green-400 text-white font-black py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all active:scale-95 text-lg">
+                   Завершить обучение
+                </button>
+             )}
            </div>
          </div>
       )}
@@ -283,7 +272,6 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                   </button>
                </div>
                
-               {/* Monetization / AD blocks */}
                <div className="bg-slate-800/80 p-4 rounded-xl border border-green-700/50 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
                   <div className="absolute top-0 right-0 bg-green-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white">Реклама</div>
                   <div className="flex items-center gap-3 relative z-10">
@@ -366,8 +354,6 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
            </div>
         </div>
       )}
-
-      {/* Recover Windows Button - Moved to top left container */}
 
       {/* News Feed Panel */}
       {newsVisible && (

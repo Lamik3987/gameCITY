@@ -80,6 +80,7 @@ export interface CityStats {
   timeOfDay: number; // 0.0 to 1.0
   upgrades: TechUpgrades;
   happiness: number;
+  tutorialStep: number;
   tutorialCompleted: boolean;
 }
 

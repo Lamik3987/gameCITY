@@ -2,13 +2,12 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Grid, TileData, BuildingType, BuildingCategory, CityStats, NewsItem, FloatingTextData } from './types';
 import { GRID_SIZE, CHUNK_SIZE, BUILDINGS, DAY_MS, INITIAL_MONEY, MILESTONES, EconomyConfig } from './constants';
+import IsoMap from './components/IsoMap';
 import UIOverlay from './components/UIOverlay';
 import StartScreen from './components/StartScreen';
-
-const IsoMap = React.lazy(() => import('./components/IsoMap'));
 
 const createInitialGrid = (): Grid => {
   const grid: Grid = [];
@@ -565,15 +564,13 @@ function App() {
   return (
     <div className="relative w-screen h-[100dvh] overflow-hidden selection:bg-transparent selection:text-transparent bg-sky-900 pb-safe">
       {/* 3D Rendering Layer - Always visible now, providing background for start screen */}
-      <Suspense fallback={<div className="absolute inset-0 bg-sky-900 flex items-center justify-center text-white font-bold text-2xl z-0">Загрузка города...</div>}>
-        <IsoMap 
-          grid={grid} 
-          onTileClick={handleTileClick} 
-          hoveredTool={selectedTool}
-          stats={stats}
-          floatingTexts={floatingTexts}
-        />
-      </Suspense>
+      <IsoMap 
+        grid={grid} 
+        onTileClick={handleTileClick} 
+        hoveredTool={selectedTool}
+        stats={stats}
+        floatingTexts={floatingTexts}
+      />
       
       {/* Start Screen Overlay */}
       {!gameStarted && (

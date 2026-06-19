@@ -1884,7 +1884,7 @@ const EnvironmentSystem = () => {
         if (scene.fog) {
             scene.fog.color.copy(targetSkyColor);
         } else {
-            scene.fog = new THREE.Fog(targetSkyColor, 100, 190);
+            scene.fog = new THREE.Fog(targetSkyColor, 150, 250);
         }
         
         if (lightRef.current) lightRef.current.color.copy(targetLightColor);
@@ -2214,7 +2214,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
 
   return (
     <div className="absolute inset-0 bg-slate-900 touch-none">
-      <Canvas shadows={false} dpr={[1, 1.5]} gl={{ antialias: false, powerPreference: "high-performance" }}>
+      <Canvas shadows={false} dpr={[1, 1]} gl={{ antialias: false, powerPreference: "high-performance" }}>
         <OrthographicCamera makeDefault zoom={25} position={[40, 40, 40]} near={-100} far={200} />
         
         <MapControls 

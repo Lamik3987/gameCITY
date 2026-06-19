@@ -137,8 +137,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
   const getTutorialModalPosition = () => {
      if (!currentTutorial) return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
-     if (currentTutorial.highlightArea === "stats") return "top-24 left-4";
-     if (currentTutorial.highlightArea.startsWith("toolbar")) return "bottom-[180px] left-1/2 -translate-x-1/2";
+     if (currentTutorial.highlightArea === "stats") return "top-28 left-4";
+     if (currentTutorial.highlightArea.startsWith("toolbar")) return "bottom-72 left-1/2 -translate-x-1/2";
      if (currentTutorial.highlightArea === "missions_and_gift") return "top-1/2 left-4 -translate-y-1/2";
      return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
   };

@@ -202,13 +202,13 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         
         <div className={`relative ${getHighlightClass('top-buttons')} flex flex-col gap-2 items-start mt-2 p-1`}>
            <button 
-             onClick={() => setUpgradesVisible(true)}
+             onPointerDown={(e) => { e.stopPropagation(); setUpgradesVisible(true); }}
              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-purple-400/50 transition-transform active:scale-95 text-xs"
            >
              <ShoppingBag size={14} /> Улучшения
            </button>
            {!newsVisible && (
-            <button onClick={() => setNewsVisible(true)} className="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
+            <button onPointerDown={(e) => { e.stopPropagation(); setNewsVisible(true); }} className="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
               <AlertCircle size={14} /> Открыть Новости
             </button>
           )}
@@ -221,7 +221,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
            <div className="bg-slate-900 border-2 border-indigo-500 p-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(99,102,241,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-hidden">
              
              {/* Skip button */}
-             <button onClick={completeTutorial} className="absolute top-3 right-3 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-xs">
+             <button onPointerDown={(e) => { e.stopPropagation(); completeTutorial(); }} className="absolute top-3 right-3 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-xs">
                <X size={14} /> Пропустить
              </button>
 
@@ -237,17 +237,17 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
              {/* Navigation Buttons */}
              <div className="flex gap-2">
                {tutorialStep > 1 && (
-                 <button onClick={prevTutorialStep} className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl text-sm transition-all active:scale-95">
+                 <button onPointerDown={(e) => { e.stopPropagation(); prevTutorialStep(); }} className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl text-sm transition-all active:scale-95">
                    Назад
                  </button>
                )}
                
                {tutorialStep < 5 ? (
-                 <button onClick={nextTutorialStep} className="flex-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(79,70,229,0.4)] transition-all active:scale-95">
+                 <button onPointerDown={(e) => { e.stopPropagation(); nextTutorialStep(); }} className="flex-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(79,70,229,0.4)] transition-all active:scale-95">
                    Далее
                  </button>
                ) : (
-                 <button onClick={completeTutorial} className="flex-2 w-full bg-green-500 hover:bg-green-400 text-white font-black py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all active:scale-95">
+                 <button onPointerDown={(e) => { e.stopPropagation(); completeTutorial(); }} className="flex-2 w-full bg-green-500 hover:bg-green-400 text-white font-black py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all active:scale-95">
                    Начать Игру!
                  </button>
                )}
@@ -498,7 +498,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       
       {/* Footer info & Settings btn */}
       <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2 pointer-events-auto mb-safe">
-        <button onClick={() => setSettingsVisible(true)} className="bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-xl shadow-lg border border-gray-600 transition-colors">
+        <button onPointerDown={(e) => { e.stopPropagation(); setSettingsVisible(true); }} className="bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-xl shadow-lg border border-gray-600 transition-colors">
           <Settings size={18} />
         </button>
         <div className="text-[8px] md:text-[9px] text-white/30 font-mono text-right hover:text-white/60 transition-colors">

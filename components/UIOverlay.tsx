@@ -110,9 +110,9 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
   const getHighlightClass = (area: string) => {
     if (currentTutorial && currentTutorial.highlightArea === area) {
-      return "relative z-50 ring-4 ring-yellow-400 rounded-2xl bg-black/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300";
+      return "z-50 ring-4 ring-yellow-400 rounded-2xl bg-black/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300";
     }
-    return "relative z-10 transition-all duration-300";
+    return "z-10 transition-all duration-300";
   };
 
   useEffect(() => {
@@ -181,7 +181,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       )}
 
       <div className="absolute top-4 left-4 pointer-events-auto flex flex-col gap-2">
-        <div className={`${getHighlightClass('stats')} bg-gray-900/90 text-white p-2 md:p-3 rounded-xl border border-gray-700 shadow-2xl backdrop-blur-md flex gap-3 md:gap-6 items-center w-full md:w-auto`}>
+        <div className={`relative ${getHighlightClass('stats')} bg-gray-900/90 text-white p-2 md:p-3 rounded-xl border border-gray-700 shadow-2xl backdrop-blur-md flex gap-3 md:gap-6 items-center w-full md:w-auto`}>
           <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''}`}>
             <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">Казна</span>
             <span className={`text-lg md:text-2xl font-black font-mono drop-shadow-md transition-colors ${moneyError ? 'text-red-500' : 'text-green-400'}`}>${Math.floor(stats.money).toLocaleString()}</span>
@@ -203,7 +203,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           </div>
         </div>
         
-        <div className={`${getHighlightClass('top-buttons')} flex flex-col gap-2 items-start mt-2 p-1`}>
+        <div className={`relative ${getHighlightClass('top-buttons')} flex flex-col gap-2 items-start mt-2 p-1`}>
            <button 
              onClick={() => setUpgradesVisible(true)}
              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-purple-400/50 transition-transform active:scale-95 text-xs"

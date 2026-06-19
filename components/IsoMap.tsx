@@ -2214,7 +2214,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
 
   return (
     <div className="absolute inset-0 bg-slate-900 touch-none">
-      <Canvas shadows={false} dpr={[1, 1]} gl={{ antialias: false, powerPreference: "high-performance" }}>
+      <Canvas shadows={false} dpr={[1, 1.5]} gl={{ antialias: false, powerPreference: "high-performance" }}>
         <OrthographicCamera makeDefault zoom={25} position={[40, 40, 40]} near={-100} far={200} />
         
         <MapControls 
@@ -2302,7 +2302,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
           </mesh>
 
           <GroundInstances grid={grid} hoveredTool={hoveredTool} />
-          {(() => {
+          {useMemo(() => {
              const elements = [];
              for (let y = 0; y < GRID_SIZE; y++) {
                for (let x = 0; x < GRID_SIZE; x++) {
@@ -2338,7 +2338,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
                }
              }
              return elements;
-          })()}
+          }, [grid])}
 
           {/* Visual Elements - disable pointer events */}
           <group raycast={() => null}>

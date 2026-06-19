@@ -1970,6 +1970,7 @@ const CameraController = () => {
     const isDev = new URLSearchParams(window.location.search).get('dev') === 'true';
     const { camera, controls } = useThree();
     const targetAzimuth = useRef<number | null>(null);
+    const targetZoom = useRef<number | null>(null);
 
     useEffect(() => {
         const handleRotate = (e: any) => {
@@ -1981,9 +1982,24 @@ const CameraController = () => {
                 targetAzimuth.current += (e.detail.dir * Math.PI / 2);
             }
         };
+        const handleZoom = (e: any) => {
+            if (camera) {
+                const orthCam = camera as any;
+                if (targetZoom.current === null) {
+                    targetZoom.current = orthCam.zoom;
+                }
+                // Zoom in (+1) means increase zoom level.
+                const maxZ = typeof window !== 'undefined' && window.innerWidth <= 768 ? 45 : 70;
+                targetZoom.current = Math.max(12, Math.min(targetZoom.current + e.detail.dir * 8, maxZ));
+            }
+        };
         window.addEventListener('rotateCamera', handleRotate);
-        return () => window.removeEventListener('rotateCamera', handleRotate);
-    }, [controls]);
+        window.addEventListener('zoomCamera', handleZoom);
+        return () => {
+            window.removeEventListener('rotateCamera', handleRotate);
+            window.removeEventListener('zoomCamera', handleZoom);
+        };
+    }, [controls, camera]);
 
     useFrame(() => {
         if (!controls || isDev) return;
@@ -1999,6 +2015,20 @@ const CameraController = () => {
                 targetAzimuth.current = null;
             }
         }
+
+        if (targetZoom.current !== null && camera) {
+            const orthCam = camera as any;
+            const diff = targetZoom.current - orthCam.zoom;
+            if (Math.abs(diff) > 0.1) {
+                orthCam.zoom += diff * 0.15;
+                orthCam.updateProjectionMatrix();
+            } else {
+                orthCam.zoom = targetZoom.current;
+                orthCam.updateProjectionMatrix();
+                targetZoom.current = null;
+            }
+        }
+
 
         
         // Clamp target (panning constraints)
@@ -2337,7 +2367,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
           target={[0,-0.5,0]}
           touches={{
             ONE: THREE.TOUCH.PAN,
-            TWO: THREE.TOUCH.DOLLY_ROTATE
+            TWO: THREE.TOUCH.DOLLY_PAN
           }}
           mouseButtons={{
             LEFT: THREE.MOUSE.PAN,

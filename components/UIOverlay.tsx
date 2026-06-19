@@ -7,7 +7,7 @@ import { Rnd } from 'react-rnd';
 import { BuildingType, CityStats, NewsItem, BuildingCategory } from '../types';
 import { BUILDINGS, MILESTONES } from '../constants';
 import { TutorialManager } from './TutorialManager';
-import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw } from 'lucide-react';
+import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface UIOverlayProps {
   stats: CityStats;
@@ -149,6 +149,10 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
   const handleRotate = (dir: 1 | -1) => {
     window.dispatchEvent(new CustomEvent('rotateCamera', { detail: { dir } }));
+  };
+
+  const handleZoom = (dir: 1 | -1) => {
+    window.dispatchEvent(new CustomEvent('zoomCamera', { detail: { dir } }));
   };
 
   useEffect(() => {
@@ -301,14 +305,27 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           )}
       </div>
 
-      {/* Camera Rotation Controls */}
+      {/* Camera Rotation and Zoom Controls */}
       <div className="absolute top-1/2 -translate-y-1/2 w-full px-2 md:px-6 pointer-events-none flex justify-between z-30">
-        <button onPointerDown={(e) => { e.stopPropagation(); handleRotate(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
-           <RotateCcw size={24} />
-        </button>
-        <button onPointerDown={(e) => { e.stopPropagation(); handleRotate(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
-           <RotateCw size={24} />
-        </button>
+        {/* Left Side: Rotation */}
+        <div className="flex flex-col gap-4">
+            <button onPointerDown={(e) => { e.stopPropagation(); handleRotate(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
+               <RotateCcw size={24} />
+            </button>
+            <button onPointerDown={(e) => { e.stopPropagation(); handleRotate(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
+               <RotateCw size={24} />
+            </button>
+        </div>
+        
+        {/* Right Side: Zoom */}
+        <div className="flex flex-col gap-4">
+            <button onPointerDown={(e) => { e.stopPropagation(); handleZoom(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
+               <ZoomIn size={24} />
+            </button>
+            <button onPointerDown={(e) => { e.stopPropagation(); handleZoom(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
+               <ZoomOut size={24} />
+            </button>
+        </div>
       </div>
 
       {/* Dynamic Tutorial Modal - Replaced with Help button logic if needed, but keeping existing for now with help toggle */}

@@ -105,7 +105,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const newsRef = useRef<HTMLDivElement>(null);
   
   const [upgradesVisible, setUpgradesVisible] = useState(false);
-  const [newsVisible, setNewsVisible] = useState(true);
+  const [newsVisible, setNewsVisible] = useState(false);
   const [newsMinimized, setNewsMinimized] = useState(false);
   const [missionsExpanded, setMissionsExpanded] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [newsSize, setNewsSize] = useState({ width: 320, height: 200 });
@@ -253,7 +253,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       </div>
 
       {/* Quests / Starter Goals */}
-      <div className={`absolute top-[130px] md:top-52 left-2 md:left-4 z-40 bg-gray-900/95 text-white p-2 md:p-3 rounded-xl border-l-4 border-l-indigo-500 shadow-xl backdrop-blur-md transition-all animate-fade-in ${missionsExpanded ? 'w-48' : 'w-auto'} ${getHighlightClass('center')}`}>
+      <div className={`absolute top-2 right-2 md:top-4 md:right-4 z-40 pointer-events-auto bg-gray-900/95 text-white p-2 md:p-3 rounded-xl md:border-r-0 md:border-l-4 border-r-4 border-indigo-500 shadow-xl backdrop-blur-md transition-all animate-fade-in ${missionsExpanded ? 'w-48' : 'w-auto'} ${getHighlightClass('center')}`}>
           <div 
              className={`flex items-center gap-2 ${missionsExpanded ? 'mb-2 border-b border-gray-700 pb-1' : ''} cursor-pointer select-none`}
              onPointerDown={(e) => { e.stopPropagation(); setMissionsExpanded(!missionsExpanded); }}

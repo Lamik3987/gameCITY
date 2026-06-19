@@ -6,6 +6,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { BuildingType, CityStats, NewsItem, BuildingCategory, Grid } from '../types';
 import { BUILDINGS, MILESTONES, EconomyConfig } from '../constants';
+import { MISSIONS } from '../missions';
+import { sounds } from './soundEngine';
 import { TutorialManager, TUTORIAL_STEPS } from './TutorialManager';
 import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut, Gift } from 'lucide-react';
 
@@ -130,7 +132,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   }, [grid, stats.population, stats.upgrades?.taxBoost]);
 
   const adRewardMoney = React.useMemo(() => {
-     return Math.round(1000 * Math.pow(2.5, stats.level - 1));
+     return Math.round(1000 * Math.pow(2.2, stats.level - 1));
   }, [stats.level]);
   
   const [upgradesVisible, setUpgradesVisible] = useState(false);
@@ -144,8 +146,33 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   });
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [adPopupVisible, setAdPopupVisible] = useState(false);
-  const [volume, setVolume] = useState(50);
-  const [sfxVolume, setSfxVolume] = useState(50);
+  const [volume, setVolume] = useState(() => {
+    if (typeof window !== 'undefined') {
+       return parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+    }
+    return 50;
+  });
+  const [sfxVolume, setSfxVolume] = useState(() => {
+    if (typeof window !== 'undefined') {
+       return parseInt(localStorage.getItem('polycity_sfx_vol') || '50', 10);
+    }
+    return 50;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('polycity_bgm_vol', volume.toString());
+    }
+    sounds.setBgmVolume(volume / 100);
+  }, [volume]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('polycity_sfx_vol', sfxVolume.toString());
+    }
+    sounds.setSfxVolume(sfxVolume / 100);
+  }, [sfxVolume]);
+
   const [newsZ, setNewsZ] = useState(10);
   const [activeCategory, setActiveCategory] = useState<BuildingCategory>(BuildingCategory.Infrastructure);
   const [toolbarExpanded, setToolbarExpanded] = useState(true);
@@ -302,44 +329,62 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                   <div className="p-0.5 hover:bg-gray-700 rounded"><ChevronUp size={12} className="text-gray-400" /></div>
                )}
             </div>
-            {missionsExpanded && (
-              <>
-                {stats.population < 15 ? (
-                    <div className="text-[10px] space-y-1">
-                       <div className="flex justify-between items-center">
-                          <span>Постройте дома</span>
-                          <span className="text-indigo-300 font-bold">{stats.population}/15</span>
-                       </div>
-                       <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
-                          <div className="bg-indigo-500 h-full transition-all" style={{width: `${Math.min(100, (stats.population/15)*100)}%`}}></div>
-                       </div>
-                       <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Награда: $500</div>
-                    </div>
-                ) : stats.level < 2 ? (
-                    <div className="text-[10px] space-y-1">
-                       <div className="flex justify-between items-center">
-                          <span>Достигните 2 ур.</span>
-                          <span className="text-indigo-300 font-bold">{stats.level}/2</span>
-                       </div>
-                       <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
-                          <div className="bg-indigo-500 h-full transition-all" style={{width: `${stats.level >= 2 ? 100 : 50}%`}}></div>
-                       </div>
-                       <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Награда: $1500</div>
-                    </div>
-                ) : (
-                    <div className="text-[10px] space-y-1">
-                       <div className="flex justify-between items-center">
-                          <span>Счастье &gt; 80%</span>
-                          <span className="text-indigo-300 font-bold">{Math.floor(stats.happiness)}%</span>
-                       </div>
-                       <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
-                          <div className="bg-indigo-500 h-full transition-all" style={{width: `${Math.min(100, stats.happiness)}%`}}></div>
-                       </div>
-                       <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Ежедневный доход +50%</div>
-                    </div>
-                )}
-              </>
-            )}
+            {missionsExpanded && (() => {
+               const missionIdx = stats.currentMissionIndex ?? 0;
+               if (missionIdx >= MISSIONS.length) {
+                  return (
+                     <div className="text-[10px] text-gray-400 italic py-1 text-center">
+                        🎉 Все миссии выполнены! Вы великий мэр!
+                     </div>
+                  );
+               }
+               const currentMission = MISSIONS[missionIdx];
+               const isCompleted = currentMission.check(stats, grid);
+               const { current, target } = currentMission.getProgress(stats, grid);
+               const progressPct = Math.min(100, Math.max(0, (current / target) * 100));
+
+               return (
+                  <div className="text-[10px] space-y-1.5 pointer-events-auto">
+                     <div className="flex justify-between items-start gap-2">
+                        <span className="font-bold text-indigo-300">{currentMission.title}</span>
+                        <span className="text-gray-450 font-mono font-bold">{current}/{target}</span>
+                     </div>
+                     <p className="text-[9px] text-gray-300 leading-normal">{currentMission.description}</p>
+                     
+                     <div className="w-full bg-gray-700 h-1.5 rounded-full overflow-hidden mt-1">
+                        <div 
+                           className={`h-full transition-all duration-500 ${isCompleted ? 'bg-green-500 animate-pulse' : 'bg-indigo-550'}`} 
+                           style={{ width: `${progressPct}%` }}
+                        ></div>
+                     </div>
+
+                     <div className="flex justify-between items-center pt-1.5 mt-1 border-t border-gray-800">
+                        <span className="text-green-400 font-bold font-mono">Награда: {currentMission.rewardText}</span>
+                        {isCompleted ? (
+                           <button 
+                              onPointerDown={(e) => {
+                                 e.stopPropagation();
+                                 sounds.playCoin();
+                                 setStats(prev => ({
+                                    ...prev,
+                                    money: prev.money + currentMission.rewardValue,
+                                    currentMissionIndex: (prev.currentMissionIndex ?? 0) + 1
+                                 }));
+                                 setToastMsg(`Миссия выполнена! Получено ${currentMission.rewardText}`);
+                              }}
+                              className="bg-green-500 hover:bg-green-450 text-white font-extrabold px-2.5 py-1 rounded-lg text-[9px] transition-all active:scale-95 shadow-md shadow-green-950/50 cursor-pointer uppercase tracking-wider"
+                           >
+                              Забрать
+                           </button>
+                        ) : (
+                           <span className="text-gray-500 font-bold uppercase tracking-wider text-[8px] flex items-center gap-1 select-none">
+                              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span> Выполняется
+                           </span>
+                        )}
+                     </div>
+                  </div>
+               );
+            })()}
         </div>
         
         <div className={`relative ${getHighlightClass('top-buttons')} flex flex-col md:flex-row gap-2 items-start mt-1 p-0.5`}>
@@ -697,6 +742,13 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           <a href="https://x.com/ammaar" target="_blank" rel="noreferrer">Создано @ammaar</a>
         </div>
       </div>
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 border border-indigo-500 text-white font-extrabold py-2 px-4 rounded-xl shadow-2xl z-50 pointer-events-auto animate-fade-in text-[10px] uppercase tracking-wider flex items-center gap-2">
+          <AlertCircle size={12} className="text-indigo-400" />
+          {toastMsg}
+        </div>
+      )}
     </div>
   );
 };

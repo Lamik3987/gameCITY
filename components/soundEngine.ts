@@ -2,7 +2,9 @@
 class SoundEngine {
     private ctx: AudioContext | null = null;
     private enabled = true;
-    private volume = 0.5;
+    private bgm: HTMLAudioElement | null = null;
+    private bgmVolume = 0.5;
+    private sfxVolume = 0.5;
 
     init() {
         if (!this.ctx) {
@@ -11,11 +13,35 @@ class SoundEngine {
         if (this.ctx.state === 'suspended') {
             this.ctx.resume();
         }
+        this.initBGM();
     }
 
-    setVolume(v: number) {
-        this.volume = Math.max(0, Math.min(1, v));
-        this.enabled = this.volume > 0;
+    private initBGM() {
+        if (!this.bgm) {
+            this.bgm = new Audio('./bgm.mp3');
+            this.bgm.loop = true;
+            this.bgm.volume = this.bgmVolume;
+        }
+        if (this.bgm.paused && this.bgmVolume > 0) {
+            this.bgm.play().catch(e => console.log('BGM wait interaction:', e));
+        }
+    }
+
+    setBgmVolume(v: number) {
+        this.bgmVolume = Math.max(0, Math.min(1, v));
+        if (this.bgm) {
+            this.bgm.volume = this.bgmVolume;
+            if (this.bgmVolume > 0 && this.bgm.paused) {
+                this.bgm.play().catch(e => {});
+            }
+        } else if (this.bgmVolume > 0) {
+            this.initBGM();
+        }
+    }
+
+    setSfxVolume(v: number) {
+        this.sfxVolume = Math.max(0, Math.min(1, v));
+        this.enabled = this.sfxVolume > 0;
     }
 
     private playTone(freq: number, type: OscillatorType, duration: number, volMultiplier = 1) {
@@ -27,7 +53,7 @@ class SoundEngine {
         osc.type = type;
         osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
         
-        gain.gain.setValueAtTime(this.volume * volMultiplier, this.ctx.currentTime);
+        gain.gain.setValueAtTime(this.sfxVolume * volMultiplier, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
         
         osc.connect(gain);
@@ -46,7 +72,7 @@ class SoundEngine {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(300, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+        gain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
         osc.connect(gain);
         gain.connect(this.ctx.destination);

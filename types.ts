@@ -82,6 +82,7 @@ export interface CityStats {
   happiness: number;
   tutorialStep: number;
   tutorialCompleted: boolean;
+  currentMissionIndex?: number;
 }
 
 export interface NewsItem {

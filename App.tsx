@@ -10,6 +10,7 @@ import IsoMap from './components/IsoMap';
 import UIOverlay from './components/UIOverlay';
 import StartScreen from './components/StartScreen';
 import { sounds } from './components/soundEngine';
+import { yandexSDK } from './yandexSDK';
 
 const createInitialGrid = (): Grid => {
   const grid: Grid = [];
@@ -34,6 +35,10 @@ function App() {
   // --- Game State ---
   const [gameStarted, setGameStarted] = useState(false);
 
+  useEffect(() => {
+     yandexSDK.init();
+  }, []);
+
   const [grid, setGrid] = useState<Grid>(createInitialGrid);
   const [stats, setStats] = useState<CityStats>(() => {
     const isTutorialGloballyDone = typeof localStorage !== 'undefined' && localStorage.getItem('polycity_tutorial_completed') === 'true';
@@ -46,7 +51,8 @@ function App() {
       happiness: 50,
       upgrades: { taxBoost: 0, roadDiscount: 0, parkBoost: 0 },
       tutorialStep: isTutorialGloballyDone ? 0 : 1,
-      tutorialCompleted: isTutorialGloballyDone
+      tutorialCompleted: isTutorialGloballyDone,
+      currentMissionIndex: 0
     };
   });
   const [selectedTool, setSelectedTool] = useState<BuildingType | null>(null);
@@ -74,7 +80,7 @@ function App() {
       }
     }
     const baseExp = Math.max(0, unlockedCount - 1);
-    return Math.round(500 * Math.pow(1.25, baseExp));
+    return Math.round(500 * Math.pow(1.35, baseExp));
   }, [grid]);
 
   const dynamicCosts = useMemo(() => ({
@@ -152,7 +158,8 @@ function App() {
            setStats({ 
               ...parsed.stats, 
               tutorialCompleted: isDone,
-              tutorialStep: isDone ? 0 : (parsed.stats.tutorialStep ?? 1) 
+              tutorialStep: isDone ? 0 : (parsed.stats.tutorialStep ?? 1),
+              currentMissionIndex: parsed.stats.currentMissionIndex ?? 0
            });
            setGrid(loadedGrid);
         }
@@ -306,7 +313,7 @@ function App() {
       const smallHouses = buildingCounts[BuildingType.HouseSmall] || 0;
       const medHouses = buildingCounts[BuildingType.HouseMedium] || 0;
       const largeHouses = buildingCounts[BuildingType.HouseLarge] || 0;
-      const maxPop = smallHouses * 8 + medHouses * 24 + largeHouses * 50;
+      const maxPop = smallHouses * 6 + medHouses * 18 + largeHouses * 35;
 
       let newPop = prev.population + dailyPopGrowth;
       if (newPop > maxPop) newPop = maxPop; 
@@ -412,7 +419,7 @@ function App() {
      
      // Base $500. Exponential increase based on chunks unlocked
      const baseExp = Math.max(0, unlockedCount - 1); // center chunk is 1
-     const cost = Math.round(500 * Math.pow(1.25, baseExp));
+     const cost = Math.round(500 * Math.pow(1.35, baseExp));
 
      if (statsRef.current.money < cost) {
        addNewsItem({id: Date.now().toString(), text: `Недостаточно средств на территорию. Нужно: $${cost}.`, type: 'negative'});
@@ -581,23 +588,44 @@ function App() {
   }, [selectedTool, addNewsItem, gameStarted, unlockChunk]);
 
   const handleStart = () => {
+    sounds.init();
     setGameStarted(true);
   };
 
   const handleAdReward = (rewardStr: string) => {
-     sounds.playCoin();
-     if (rewardStr === 'AD_MONEY') {
-         const adRewardMoney = Math.round(1000 * Math.pow(2.5, statsRef.current.level - 1));
-         setStats(prev => ({...prev, money: prev.money + adRewardMoney}));
-         addNewsItem({id: Date.now().toString(), text: `Реклама просмотрена! Получена награда: ${adRewardMoney.toLocaleString()}`, type: 'positive'});
-     } else if (rewardStr === 'TAX_BOOST') {
-         addNewsItem({id: Date.now().toString(), text: "Реклама просмотрена! Активирован буст налогов!", type: 'positive'});
-         setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 1}}));
-         setTimeout(() => {
-            setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 0}}));
-            addNewsItem({id: Date.now().toString(), text: "Эффект удвоения налогов завершен.", type: 'neutral'});
-         }, 180000); // 3 minutes
-     }
+     sounds.setBgmVolume(0); // Pause music
+
+     yandexSDK.showRewardedVideo(
+         // onRewarded
+         () => {
+             sounds.playCoin();
+             if (rewardStr === 'AD_MONEY') {
+                 const adRewardMoney = Math.round(1000 * Math.pow(2.2, statsRef.current.level - 1));
+                 setStats(prev => ({...prev, money: prev.money + adRewardMoney}));
+                 addNewsItem({id: Date.now().toString(), text: `Спонсорская помощь! Получена награда: $${adRewardMoney.toLocaleString()}`, type: 'positive'});
+             } else if (rewardStr === 'TAX_BOOST') {
+                 addNewsItem({id: Date.now().toString(), text: "Спонсорская помощь! Активирован буст налогов!", type: 'positive'});
+                 setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 1}}));
+                 setTimeout(() => {
+                    setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 0}}));
+                    addNewsItem({id: Date.now().toString(), text: "Эффект удвоения налогов завершен.", type: 'neutral'});
+                 }, 180000); // 3 minutes
+             }
+         },
+         // onOpen
+         undefined,
+         // onClose
+         () => {
+             const vol = parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+             sounds.setBgmVolume(vol / 100);
+         },
+         // onError
+         (e) => {
+             const vol = parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+             sounds.setBgmVolume(vol / 100);
+             addNewsItem({id: Date.now().toString(), text: "Ошибка загрузки рекламы. Попробуйте позже.", type: 'negative'});
+         }
+     );
   };
 
   return (

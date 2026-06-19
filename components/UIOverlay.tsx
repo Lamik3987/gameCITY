@@ -7,7 +7,7 @@ import { Rnd } from 'react-rnd';
 import { BuildingType, CityStats, NewsItem, BuildingCategory } from '../types';
 import { BUILDINGS, MILESTONES } from '../constants';
 import { TutorialManager } from './TutorialManager';
-import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target } from 'lucide-react';
+import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw } from 'lucide-react';
 
 interface UIOverlayProps {
   stats: CityStats;
@@ -107,6 +107,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const [upgradesVisible, setUpgradesVisible] = useState(false);
   const [newsVisible, setNewsVisible] = useState(true);
   const [newsMinimized, setNewsMinimized] = useState(false);
+  const [missionsExpanded, setMissionsExpanded] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [newsSize, setNewsSize] = useState({ width: 320, height: 200 });
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [adPopupVisible, setAdPopupVisible] = useState(false);
@@ -144,6 +145,10 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
   const prevTutorialStep = () => {
      setStats(prev => ({ ...prev, tutorialStep: Math.max(1, (prev.tutorialStep || 0) - 1) }));
+  };
+
+  const handleRotate = (dir: 1 | -1) => {
+    window.dispatchEvent(new CustomEvent('rotateCamera', { detail: { dir } }));
   };
 
   useEffect(() => {
@@ -198,90 +203,112 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         <div className="absolute inset-0 z-40 bg-black/60 pointer-events-auto transition-opacity duration-500 backdrop-blur-sm" />
       )}
 
-      <div className="absolute top-4 left-4 pointer-events-auto flex flex-col gap-2">
-        <div className={`relative ${getHighlightClass('stats')} bg-gray-900/90 text-white p-2 md:p-3 rounded-xl border border-gray-700 shadow-2xl backdrop-blur-md flex gap-3 md:gap-6 items-center w-full md:w-auto`}>
-          <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''} relative`}>
-            <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">Казна</span>
-            <span className={`text-lg md:text-2xl font-black font-mono drop-shadow-md transition-colors ${moneyError ? 'text-red-500' : 'text-green-400'}`}>${Math.floor(stats.money).toLocaleString()}</span>
-            <span className="absolute -bottom-3 left-0 text-[9px] font-black text-green-500">+{Math.floor(stats.population * 2 * (stats.happiness / 50) * (1 + (stats.upgrades?.taxBoost || 0)))}/день</span>
+      <div className="absolute top-2 left-2 md:top-4 md:left-4 pointer-events-auto flex flex-col gap-2 z-40">
+        <div className={`relative ${getHighlightClass('stats')} bg-gray-900/95 text-white p-1.5 md:p-3 rounded-xl border border-gray-700 shadow-xl backdrop-blur-md flex gap-2 md:gap-6 items-center w-full md:w-auto overflow-hidden`}>
+          <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''} relative px-1`}>
+            <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">Казна</span>
+            <span className={`text-base md:text-2xl font-black font-mono drop-shadow-md transition-colors ${moneyError ? 'text-red-500' : 'text-green-400'} leading-tight`}>${Math.floor(stats.money).toLocaleString()}</span>
+            <span className="absolute -bottom-2 md:-bottom-3 left-1 text-[8px] md:text-[9px] font-black text-green-500">+{Math.floor(stats.population * 2 * (stats.happiness / 50) * (1 + (stats.upgrades?.taxBoost || 0)))}/д</span>
           </div>
-          <div className="w-px h-6 md:h-8 bg-gray-700"></div>
+          <div className="w-px h-5 md:h-8 bg-gray-700"></div>
           <div className="flex flex-col relative min-w-[70px]">
             <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">{currentMilestone?.name || 'Город'} (Ур. {stats.level})</span>
-            <span className="text-base md:text-xl font-bold text-blue-300 font-mono drop-shadow-md">{stats.population.toLocaleString()}</span>
+            <span className="text-sm md:text-xl font-bold text-blue-300 font-mono drop-shadow-md leading-tight">{stats.population.toLocaleString()}</span>
             {nextMilestone && (
-              <div className="w-full h-1 bg-gray-700 mt-1 rounded-full overflow-hidden absolute -bottom-2" title={`До следующего уровня: ${stats.population} / ${nextMilestone.requiredPop}`}>
+              <div className="w-full h-1 bg-gray-700 mt-0.5 rounded-full overflow-hidden absolute -bottom-1 md:-bottom-2" title={`До следующего уровня: ${stats.population} / ${nextMilestone.requiredPop}`}>
                 <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${levelProgress}%` }}></div>
               </div>
             )}
           </div>
-          <div className="w-px h-6 md:h-8 bg-gray-700"></div>
+          <div className="w-px h-5 md:h-8 bg-gray-700"></div>
           <div className="flex flex-col items-center">
-             <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">Счастье</span>
-             <span className={`text-base md:text-lg font-bold font-mono ${stats.happiness > 70 ? 'text-green-400' : stats.happiness < 40 ? 'text-red-400' : 'text-yellow-400'}`}>{Math.floor(stats.happiness)}%</span>
+             <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">Счастье</span>
+             <span className={`text-sm md:text-lg font-bold font-mono leading-tight ${stats.happiness > 70 ? 'text-green-400' : stats.happiness < 40 ? 'text-red-400' : 'text-yellow-400'}`}>{Math.floor(stats.happiness)}%</span>
           </div>
-          <div className="w-px h-6 md:h-8 bg-gray-700"></div>
-          <div className="flex flex-col items-end">
-             <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">День</span>
-             <span className="text-base md:text-lg font-bold text-white font-mono">{stats.day}</span>
+          <div className="w-px h-5 md:h-8 bg-gray-700"></div>
+          <div className="flex flex-col items-end px-1">
+             <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">День</span>
+             <span className="text-sm md:text-lg font-bold text-white font-mono leading-tight">{stats.day}</span>
           </div>
         </div>
         
-        <div className={`relative ${getHighlightClass('top-buttons')} flex flex-col gap-2 items-start mt-2 p-1`}>
+        <div className={`relative ${getHighlightClass('top-buttons')} flex flex-col md:flex-row gap-2 items-start mt-1 p-0.5`}>
            <button 
              onPointerDown={(e) => { e.stopPropagation(); setUpgradesVisible(true); }}
-             className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-purple-400/50 transition-transform active:scale-95 text-xs"
+             className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold p-2 md:py-2 md:px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-purple-400/50 transition-transform active:scale-95 text-xs"
+             title="Улучшения"
            >
-             <ShoppingBag size={14} /> Улучшения
+             <ShoppingBag size={14} /> <span className="hidden md:inline">Улучшения</span>
            </button>
            {!newsVisible && (
-            <button onPointerDown={(e) => { e.stopPropagation(); setNewsVisible(true); }} className="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
-              <AlertCircle size={14} /> Открыть Новости
+            <button onPointerDown={(e) => { e.stopPropagation(); setNewsVisible(true); }} title="Новости" className="bg-gray-800 hover:bg-gray-700 text-white text-xs p-2 md:px-3 md:py-1.5 rounded-xl md:rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
+              <AlertCircle size={14} /> <span className="hidden md:inline">Открыть Новости</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Quests / Starter Goals */}
-      <div className={`absolute top-[200px] md:top-52 left-4 z-40 bg-gray-900/90 text-white p-3 rounded-xl border-l-4 border-l-indigo-500 shadow-xl backdrop-blur-md w-48 transition-all animate-fade-in ${getHighlightClass('center')}`}>
-          <div className="flex items-center gap-2 mb-2 border-b border-gray-700 pb-1">
+      <div className={`absolute top-[130px] md:top-52 left-2 md:left-4 z-40 bg-gray-900/95 text-white p-2 md:p-3 rounded-xl border-l-4 border-l-indigo-500 shadow-xl backdrop-blur-md transition-all animate-fade-in ${missionsExpanded ? 'w-48' : 'w-auto'} ${getHighlightClass('center')}`}>
+          <div 
+             className={`flex items-center gap-2 ${missionsExpanded ? 'mb-2 border-b border-gray-700 pb-1' : ''} cursor-pointer select-none`}
+             onPointerDown={(e) => { e.stopPropagation(); setMissionsExpanded(!missionsExpanded); }}
+          >
              <Target size={14} className="text-indigo-400"/>
-             <span className="text-xs font-bold uppercase tracking-wider">Миссии Мэра</span>
+             {missionsExpanded && <span className="text-xs font-bold uppercase tracking-wider flex-1">Миссии</span>}
+             {!missionsExpanded && <span className="text-[10px] font-bold text-indigo-300">Миссии</span>}
+             {missionsExpanded && (
+                <div className="p-0.5 hover:bg-gray-700 rounded"><ChevronUp size={12} className="text-gray-400" /></div>
+             )}
           </div>
-          {stats.population < 15 ? (
-              <div className="text-[10px] space-y-1">
-                 <div className="flex justify-between items-center">
-                    <span>Постройте дома</span>
-                    <span className="text-indigo-300 font-bold">{stats.population}/15</span>
-                 </div>
-                 <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
-                    <div className="bg-indigo-500 h-full transition-all" style={{width: `${Math.min(100, (stats.population/15)*100)}%`}}></div>
-                 </div>
-                 <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Награда: $500</div>
-              </div>
-          ) : stats.level < 2 ? (
-              <div className="text-[10px] space-y-1">
-                 <div className="flex justify-between items-center">
-                    <span>Достигните 2 ур.</span>
-                    <span className="text-indigo-300 font-bold">{stats.level}/2</span>
-                 </div>
-                 <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
-                    <div className="bg-indigo-500 h-full transition-all" style={{width: `${stats.level >= 2 ? 100 : 50}%`}}></div>
-                 </div>
-                 <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Награда: $1500</div>
-              </div>
-          ) : (
-              <div className="text-[10px] space-y-1">
-                 <div className="flex justify-between items-center">
-                    <span>Счастье &gt; 80%</span>
-                    <span className="text-indigo-300 font-bold">{Math.floor(stats.happiness)}%</span>
-                 </div>
-                 <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
-                    <div className="bg-indigo-500 h-full transition-all" style={{width: `${Math.min(100, stats.happiness)}%`}}></div>
-                 </div>
-                 <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Ежедневный доход +50%</div>
-              </div>
+          {missionsExpanded && (
+            <>
+              {stats.population < 15 ? (
+                  <div className="text-[10px] space-y-1">
+                     <div className="flex justify-between items-center">
+                        <span>Постройте дома</span>
+                        <span className="text-indigo-300 font-bold">{stats.population}/15</span>
+                     </div>
+                     <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
+                        <div className="bg-indigo-500 h-full transition-all" style={{width: `${Math.min(100, (stats.population/15)*100)}%`}}></div>
+                     </div>
+                     <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Награда: $500</div>
+                  </div>
+              ) : stats.level < 2 ? (
+                  <div className="text-[10px] space-y-1">
+                     <div className="flex justify-between items-center">
+                        <span>Достигните 2 ур.</span>
+                        <span className="text-indigo-300 font-bold">{stats.level}/2</span>
+                     </div>
+                     <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
+                        <div className="bg-indigo-500 h-full transition-all" style={{width: `${stats.level >= 2 ? 100 : 50}%`}}></div>
+                     </div>
+                     <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Награда: $1500</div>
+                  </div>
+              ) : (
+                  <div className="text-[10px] space-y-1">
+                     <div className="flex justify-between items-center">
+                        <span>Счастье &gt; 80%</span>
+                        <span className="text-indigo-300 font-bold">{Math.floor(stats.happiness)}%</span>
+                     </div>
+                     <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
+                        <div className="bg-indigo-500 h-full transition-all" style={{width: `${Math.min(100, stats.happiness)}%`}}></div>
+                     </div>
+                     <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Ежедневный доход +50%</div>
+                  </div>
+              )}
+            </>
           )}
+      </div>
+
+      {/* Camera Rotation Controls */}
+      <div className="absolute top-1/2 -translate-y-1/2 w-full px-2 md:px-6 pointer-events-none flex justify-between z-30">
+        <button onPointerDown={(e) => { e.stopPropagation(); handleRotate(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
+           <RotateCcw size={24} />
+        </button>
+        <button onPointerDown={(e) => { e.stopPropagation(); handleRotate(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
+           <RotateCw size={24} />
+        </button>
       </div>
 
       {/* Dynamic Tutorial Modal - Replaced with Help button logic if needed, but keeping existing for now with help toggle */}

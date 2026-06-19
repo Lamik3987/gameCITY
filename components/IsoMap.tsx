@@ -1969,10 +1969,37 @@ const EnvironmentSystem = () => {
 const CameraController = () => {
     const isDev = new URLSearchParams(window.location.search).get('dev') === 'true';
     const { camera, controls } = useThree();
+    const targetAzimuth = useRef<number | null>(null);
+
+    useEffect(() => {
+        const handleRotate = (e: any) => {
+            if (controls) {
+                const ctrl = controls as any;
+                if (targetAzimuth.current === null) {
+                    targetAzimuth.current = ctrl.getAzimuthalAngle();
+                }
+                targetAzimuth.current += (e.detail.dir * Math.PI / 2);
+            }
+        };
+        window.addEventListener('rotateCamera', handleRotate);
+        return () => window.removeEventListener('rotateCamera', handleRotate);
+    }, [controls]);
 
     useFrame(() => {
         if (!controls || isDev) return;
         const ctrl = controls as any;
+        
+        if (targetAzimuth.current !== null) {
+            const current = ctrl.getAzimuthalAngle();
+            const diff = targetAzimuth.current - current;
+            if (Math.abs(diff) > 0.01) {
+                ctrl.setAzimuthalAngle(current + diff * 0.1);
+            } else {
+                ctrl.setAzimuthalAngle(targetAzimuth.current);
+                targetAzimuth.current = null;
+            }
+        }
+
         
         // Clamp target (panning constraints)
         // Stricter limits to prevent panning off the map into the infinite grass

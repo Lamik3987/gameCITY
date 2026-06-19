@@ -2009,10 +2009,10 @@ const RoadMarkings = React.memo(({ x, y, grid, yOffset }: { x: number; y: number
 
 const AvenueMarkings = React.memo(({ x, y, grid, yOffset }: { x: number; y: number; grid: Grid; yOffset: number }) => {
   const solidYellow = useMemo(() => new THREE.MeshStandardMaterial({ color: '#fbbf24', roughness: 0.8 }), []);
-  const dashedWhite = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8 }), []);
+  const edgeWhite = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8 }), []);
   
   const doubleLineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 1), []);
-  const dashedGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 0.5), []);
+  const edgeGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 1), []);
 
   const hasUp = y > 0 && (grid[y - 1][x].buildingType === BuildingType.Avenue || grid[y - 1][x + 1]?.buildingType === BuildingType.Avenue);
   const hasDown = y < GRID_SIZE - 2 && (grid[y + 2][x].buildingType === BuildingType.Avenue || grid[y + 2][x + 1]?.buildingType === BuildingType.Avenue);
@@ -2030,20 +2030,16 @@ const AvenueMarkings = React.memo(({ x, y, grid, yOffset }: { x: number; y: numb
          <group position={[0, -0.5, 0]}>
             <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
             <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[-0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[-0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[-0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
+            <mesh position={[0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
          </group>
       )}
-      {hasDown && (
+      {(hasDown || (isVert && !isIntersection)) && (
          <group position={[0, 0.5, 0]}>
             <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
             <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[-0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[-0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[-0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
+            <mesh position={[0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
          </group>
       )}
 
@@ -2052,20 +2048,16 @@ const AvenueMarkings = React.memo(({ x, y, grid, yOffset }: { x: number; y: numb
          <group position={[-0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
             <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
             <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[-0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[-0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[-0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
+            <mesh position={[0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
          </group>
       )}
-      {hasRight && (
+      {(hasRight || (isHoriz && !isIntersection)) && (
          <group position={[0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
             <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
             <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[-0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[-0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
-            <mesh position={[0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[-0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
+            <mesh position={[0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
          </group>
       )}
     </group>

@@ -1989,8 +1989,8 @@ const CameraController = () => {
                     targetZoom.current = orthCam.zoom;
                 }
                 // Zoom in (+1) means increase zoom level.
-                const maxZ = typeof window !== 'undefined' && window.innerWidth <= 768 ? 45 : 70;
-                targetZoom.current = Math.max(12, Math.min(targetZoom.current + e.detail.dir * 8, maxZ));
+                const maxZ = typeof window !== 'undefined' && window.innerWidth <= 768 ? 55 : 80;
+                targetZoom.current = Math.max(25, Math.min(targetZoom.current + e.detail.dir * 8, maxZ));
             }
         };
         window.addEventListener('rotateCamera', handleRotate);
@@ -2007,11 +2007,16 @@ const CameraController = () => {
         
         if (targetAzimuth.current !== null) {
             const current = ctrl.getAzimuthalAngle();
-            const diff = targetAzimuth.current - current;
+            let diff = targetAzimuth.current - current;
+            
+            // Normalize diff to [-PI, PI] to fix infinite shaking bug
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+
             if (Math.abs(diff) > 0.01) {
-                ctrl.setAzimuthalAngle(current + diff * 0.1);
+                ctrl.setAzimuthalAngle(current + diff * 0.15);
             } else {
-                ctrl.setAzimuthalAngle(targetAzimuth.current);
+                ctrl.setAzimuthalAngle(current + diff);
                 targetAzimuth.current = null;
             }
         }
@@ -2352,7 +2357,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
   return (
     <div className="absolute inset-0 bg-[#10b981] touch-none">
       <Canvas shadows={false} dpr={[1, 1]} gl={{ antialias: false, powerPreference: "high-performance" }}>
-        <OrthographicCamera makeDefault zoom={25} position={[40, 40, 40]} near={-100} far={200} />
+        <OrthographicCamera makeDefault zoom={25} position={[40, 40, 40]} near={-1000} far={1000} />
         
         <MapControls 
           makeDefault

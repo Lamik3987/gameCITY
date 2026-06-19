@@ -736,12 +736,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </button>
       </div>
 
-      {/* Footer info in bottom-right */}
-      <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 pointer-events-none z-[60]">
-        <div className="text-[8px] md:text-[9px] text-white/30 font-mono text-right hover:text-white/60 transition-colors pointer-events-auto">
-          <a href="https://x.com/ammaar" target="_blank" rel="noreferrer">Создано @ammaar</a>
-        </div>
-      </div>
+
       {/* Toast Notification */}
       {toastMsg && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-slate-900 border border-indigo-500 text-white font-extrabold py-2 px-4 rounded-xl shadow-2xl z-50 pointer-events-auto animate-fade-in text-[10px] uppercase tracking-wider flex items-center gap-2">

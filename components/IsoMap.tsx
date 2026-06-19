@@ -2360,6 +2360,8 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
           enableZoom={true}
           enableDamping={true}
           dampingFactor={0.05}
+          rotateSpeed={1.5}
+          zoomSpeed={1.5}
           minZoom={12}
           maxZoom={typeof window !== 'undefined' && window.innerWidth <= 768 ? 45 : 70}
           maxPolarAngle={Math.PI / 2.8}
@@ -2367,7 +2369,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
           target={[0,-0.5,0]}
           touches={{
             ONE: THREE.TOUCH.PAN,
-            TWO: THREE.TOUCH.DOLLY_PAN
+            TWO: THREE.TOUCH.DOLLY_ROTATE
           }}
           mouseButtons={{
             LEFT: THREE.MOUSE.PAN,

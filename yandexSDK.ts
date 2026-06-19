@@ -18,6 +18,10 @@ class YandexSDKWrapper {
                 window.ysdk = this.ysdk; // expose globally if needed
                 this.initialized = true;
                 console.log('Yandex Games SDK initialized');
+                if (this.ysdk.features && this.ysdk.features.LoadingAPI) {
+                    this.ysdk.features.LoadingAPI.ready();
+                    console.log('Yandex LoadingAPI ready called');
+                }
             } else {
                 console.warn('YaGames SDK script not loaded or not running in Yandex environment.');
             }

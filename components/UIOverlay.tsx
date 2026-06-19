@@ -5,7 +5,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { BuildingType, CityStats, NewsItem, BuildingCategory } from '../types';
-import { BUILDINGS } from '../constants';
+import { BUILDINGS, MILESTONES } from '../constants';
 import { TutorialManager } from './TutorialManager';
 import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings } from 'lucide-react';
 
@@ -169,6 +169,15 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
      .filter(b => b.category === activeCategory)
      .map(b => b.type);
 
+  const currentMilestone = MILESTONES.find(m => m.level === stats.level);
+  const nextMilestone = MILESTONES.find(m => m.level === stats.level + 1);
+  let levelProgress = 100;
+  if (currentMilestone && nextMilestone) {
+      const popDiff = Math.max(0, stats.population - currentMilestone.requiredPop);
+      const reqDiff = Math.max(1, nextMilestone.requiredPop - currentMilestone.requiredPop);
+      levelProgress = Math.min(100, (popDiff / reqDiff) * 100);
+  }
+
   return (
     <div className="absolute inset-0 pointer-events-none p-2 md:p-4 font-sans z-10 overflow-hidden">
       
@@ -184,9 +193,14 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
             <span className={`text-lg md:text-2xl font-black font-mono drop-shadow-md transition-colors ${moneyError ? 'text-red-500' : 'text-green-400'}`}>${Math.floor(stats.money).toLocaleString()}</span>
           </div>
           <div className="w-px h-6 md:h-8 bg-gray-700"></div>
-          <div className="flex flex-col">
-            <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">Жители ({stats.level} ур.)</span>
+          <div className="flex flex-col relative min-w-[70px]">
+            <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">{currentMilestone?.name || 'Город'} (Ур. {stats.level})</span>
             <span className="text-base md:text-xl font-bold text-blue-300 font-mono drop-shadow-md">{stats.population.toLocaleString()}</span>
+            {nextMilestone && (
+              <div className="w-full h-1 bg-gray-700 mt-1 rounded-full overflow-hidden absolute -bottom-2" title={`До следующего уровня: ${stats.population} / ${nextMilestone.requiredPop}`}>
+                <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${levelProgress}%` }}></div>
+              </div>
+            )}
           </div>
           <div className="w-px h-6 md:h-8 bg-gray-700"></div>
           <div className="flex flex-col items-center">

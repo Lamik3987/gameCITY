@@ -1636,8 +1636,9 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
 
           // Check if car J is in front of car I (dot > 0)
           const dot = ddx * ndx + ddy * ndy;
-          // Only collide if they are NOT going in opposite directions (dirDot > -0.5)
-          if (dirDot > -0.5 && dot > 0 && dist < 0.6) {
+          // Only collide if they are going in the SAME direction (dirDot > 0.5).
+          // This allows cross-traffic at intersections to phase through, preventing all deadlocks.
+          if (dirDot > 0.5 && dot > 0 && dist < 0.6) {
               speedMult = Math.min(speedMult, Math.max(0, (dist - 0.25) / 0.35));
           }
       }

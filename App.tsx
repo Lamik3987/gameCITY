@@ -291,7 +291,7 @@ function App() {
       let newHappiness = prev.happiness + (targetHappiness - prev.happiness) * 0.1;
 
       // Growth modifiers based on happiness
-      if (newHappiness < 30) dailyPopGrowth = 0; 
+      if (newHappiness < 30) dailyPopGrowth = -Math.max(1, Math.floor(prev.population * 0.02)); 
       else if (newHappiness < 50) dailyPopGrowth = Math.floor(dailyPopGrowth * 0.5);
       else if (newHappiness > 80) dailyPopGrowth = Math.floor(dailyPopGrowth * 1.5);
 
@@ -334,9 +334,16 @@ function App() {
              events.push({ text: "Не хватает жилых домов! Новым жителям негде жить.", type: "negative" });
          }
          if (newHappiness >= 80) {
-             events.push({ text: "Мэр, ваш рейтинг на высоте! Город процветает.", type: "positive" });
+             events.push({ text: "Мэр, ваш рейтинг на высоте! Парки и благоустройство радуют горожан.", type: "positive" });
          } else if (newHappiness < 40) {
-             events.push({ text: "Жители недовольны обстановкой в городе.", type: "negative" });
+             let reason = "Жители крайне недовольны качеством жизни.";
+             if (totalHappinessImpact < -10) reason = "Экология в упадке! Счастье падает из-за грязных заводов рядом с домами.";
+             else if (newPop >= maxPop && maxPop > 0) reason = "Жителям не хватает жизненного пространства!";
+             events.push({ text: reason, type: "negative" });
+         }
+         
+         if (newHappiness < 30 && prev.happiness >= 30) {
+             addNewsItem({ id: Date.now().toString() + Math.random(), text: "ВНИМАНИЕ: Счастье упало ниже 30%! Люди собирают вещи и уезжают!", type: "negative" });
          }
          if (buildingCounts[BuildingType.FactoryLarge] || buildingCounts[BuildingType.FactorySmall]) {
             events.push({ text: "Промышленные районы стабильно производят товары.", type: "neutral" });

@@ -492,12 +492,23 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                     <input type="range" min="0" max="100" value={sfxVolume} onChange={(e) => setSfxVolume(Number(e.target.value))} className="w-full accent-indigo-500" />
                  </div>
                  
-                 <div className="pt-4 border-t border-slate-800">
-                    <button onClick={() => { localStorage.removeItem('polycity_save'); window.location.reload(); }} className="w-full border border-red-500/50 hover:bg-red-500/20 text-red-400 font-bold py-2 rounded-xl text-sm transition-colors">
-                       Сбросить прогресс
-                    </button>
-                    <p className="text-[10px] text-center text-slate-500 mt-2">Осторожно, это удалит весь ваш город!</p>
-                 </div>
+                 <div className="pt-4 border-t border-slate-800 space-y-3">
+                     <button 
+                       onClick={() => { 
+                          localStorage.removeItem('polycity_tutorial_completed');
+                          setStats(prev => ({ ...prev, tutorialStep: 1, tutorialCompleted: false }));
+                          setSettingsVisible(false);
+                       }} 
+                       className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-sm transition-colors"
+                     >
+                        Пройти обучение заново
+                     </button>
+                     
+                     <button onClick={() => { localStorage.removeItem('polycity_save'); window.location.reload(); }} className="w-full border border-red-500/50 hover:bg-red-500/20 text-red-400 font-bold py-2 rounded-xl text-sm transition-colors">
+                        Сбросить прогресс
+                     </button>
+                     <p className="text-[10px] text-center text-slate-500 mt-2">Осторожно, это удалит весь ваш город!</p>
+                  </div>
               </div>
               <button onClick={() => setSettingsVisible(false)} className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-sm">
                  Закрыть

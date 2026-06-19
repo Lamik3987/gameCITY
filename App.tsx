@@ -50,7 +50,7 @@ function App() {
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
   
   const [moneyError, setMoneyError] = useState(false);
-  const moneyErrorTimeoutRef = useRef<NodeJS.Timeout>();
+  const moneyErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const triggerMoneyError = useCallback(() => {
     setMoneyError(true);

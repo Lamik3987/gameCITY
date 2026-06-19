@@ -135,17 +135,14 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   };
 
   useEffect(() => {
-    const handleToggleSettings = () => setSettingsVisible(v => !v);
     const handleTriggerAd = () => {
        if (!adPopupVisible && !upgradesVisible && !settingsVisible) {
           setAdPopupVisible(true);
        }
     };
     
-    window.addEventListener('toggle-settings', handleToggleSettings);
     window.addEventListener('trigger-ad-popup', handleTriggerAd);
     return () => {
-       window.removeEventListener('toggle-settings', handleToggleSettings);
        window.removeEventListener('trigger-ad-popup', handleTriggerAd);
     };
   }, [adPopupVisible, upgradesVisible, settingsVisible]);
@@ -386,8 +383,10 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
             x: window.innerWidth > 768 ? window.innerWidth - 340 : 16,
             y: window.innerWidth > 768 ? window.innerHeight - 250 : window.innerHeight - 350,
             width: 320,
-            height: newsMinimized ? 40 : 200,
+            height: 200,
           }}
+          size={{ width: 320, height: newsMinimized ? 40 : 200 }}
+          enableResizing={false}
           minWidth={250}
           minHeight={newsMinimized ? 40 : 150}
           bounds="parent"
@@ -499,7 +498,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       
       {/* Footer info & Settings btn */}
       <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2 pointer-events-auto mb-safe">
-        <button onClick={() => window.dispatchEvent(new CustomEvent('toggle-settings'))} className="bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-xl shadow-lg border border-gray-600 transition-colors">
+        <button onClick={() => setSettingsVisible(true)} className="bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-xl shadow-lg border border-gray-600 transition-colors">
           <Settings size={18} />
         </button>
         <div className="text-[8px] md:text-[9px] text-white/30 font-mono text-right hover:text-white/60 transition-colors">

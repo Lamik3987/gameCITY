@@ -185,10 +185,15 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
         
         {/* Buttons */}
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 items-start">
            <button onClick={() => setUpgradesVisible(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-purple-400/50 transition-transform active:scale-95 text-xs">
               <ShoppingBag size={14} /> Улучшения
            </button>
+           {!newsVisible && (
+            <button onClick={() => setNewsVisible(true)} className="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
+              <AlertCircle size={14} /> Открыть Новости
+            </button>
+          )}
         </div>
       </div>
 
@@ -362,16 +367,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
       )}
 
-      {/* Recover Windows Button */}
-      {(!newsVisible) && (
-        <div className="absolute top-28 left-4 flex flex-col gap-2 pointer-events-auto">
-          {!newsVisible && (
-            <button onClick={() => setNewsVisible(true)} className="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
-              <AlertCircle size={14} /> Открыть Новости
-            </button>
-          )}
-        </div>
-      )}
+      {/* Recover Windows Button - Moved to top left container */}
 
       {/* News Feed Panel */}
       {newsVisible && (

@@ -2018,7 +2018,7 @@ const GroundInstances = React.memo(({ grid, hoveredTool }: { grid: Grid, hovered
 
         // Create grid effect when placing buildings
         const isPlacementMode = hoveredTool !== null && hoveredTool !== BuildingType.BuyLand && hoveredTool !== BuildingType.None;
-        let scaleFactor = isPlacementMode ? 0.95 : 1;
+        let scaleFactor = 1; // Removed 0.95 scaling that caused jagged gaps
 
         if (!tile.unlocked) {
            c = '#64748b'; topY = -0.4;
@@ -2302,6 +2302,9 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
           </mesh>
 
           <GroundInstances grid={grid} hoveredTool={hoveredTool} />
+          {hoveredTool !== null && hoveredTool !== BuildingType.BuyLand && hoveredTool !== BuildingType.None && (
+             <gridHelper args={[GRID_SIZE, GRID_SIZE, '#000000', '#000000']} position={[0, -0.279, 0]} />
+          )}
           {useMemo(() => {
              const elements = [];
              for (let y = 0; y < GRID_SIZE; y++) {

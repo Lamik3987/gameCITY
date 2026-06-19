@@ -1539,28 +1539,22 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
     const roads: {x: number, y: number}[] = [];
     
     grid.forEach(row => row.forEach(tile => {
-      if (tile.buildingType === BuildingType.Road) roads.push({x: tile.x, y: tile.y});
+      if (tile.buildingType === BuildingType.Road || tile.buildingType === BuildingType.Avenue) roads.push({x: tile.x, y: tile.y});
     }));
 
     roads.forEach(r => {
         const x = r.x, y = r.y;
-        const hasUp = y > 0 && grid[y - 1][x].buildingType === BuildingType.Road;
-        const hasDown = y < GRID_SIZE - 1 && grid[y + 1][x].buildingType === BuildingType.Road;
-        const hasLeft = x > 0 && grid[y][x - 1].buildingType === BuildingType.Road;
-        const hasRight = x < GRID_SIZE - 1 && grid[y][x + 1].buildingType === BuildingType.Road;
+        const hasUp = y > 0 && (grid[y - 1][x].buildingType === BuildingType.Road || grid[y - 1][x].buildingType === BuildingType.Avenue);
+        const hasDown = y < GRID_SIZE - 1 && (grid[y + 1][x].buildingType === BuildingType.Road || grid[y + 1][x].buildingType === BuildingType.Avenue);
+        const hasLeft = x > 0 && (grid[y][x - 1].buildingType === BuildingType.Road || grid[y][x - 1].buildingType === BuildingType.Avenue);
+        const hasRight = x < GRID_SIZE - 1 && (grid[y][x + 1].buildingType === BuildingType.Road || grid[y][x + 1].buildingType === BuildingType.Avenue);
 
-        const hasUpLeft = y > 0 && x > 0 && grid[y - 1][x - 1].buildingType === BuildingType.Road;
-        const hasUpRight = y > 0 && x < GRID_SIZE - 1 && grid[y - 1][x + 1].buildingType === BuildingType.Road;
-        const hasDownLeft = y < GRID_SIZE - 1 && x > 0 && grid[y + 1][x - 1].buildingType === BuildingType.Road;
-        const hasDownRight = y < GRID_SIZE - 1 && x < GRID_SIZE - 1 && grid[y + 1][x + 1].buildingType === BuildingType.Road;
-
-        const isTopLaneH = hasDown && ((hasLeft && hasDownLeft) || (hasRight && hasDownRight));
-        const isBottomLaneH = hasUp && ((hasLeft && hasUpLeft) || (hasRight && hasUpRight));
-        const isLeftLaneV = hasRight && ((hasUp && hasUpRight) || (hasDown && hasDownRight));
-        const isRightLaneV = hasLeft && ((hasUp && hasUpLeft) || (hasDown && hasDownLeft));
+        // Since Avenue visually handles its own 2-lane layout,
+        // we can just treat traffic nodes simply.
+        // We'll keep the simplified logic for cars to turn correctly.
         const connections = [hasUp, hasDown, hasLeft, hasRight].filter(Boolean).length;
 
-        info.set(`${x},${y}`, { topH: isTopLaneH, botH: isBottomLaneH, leftV: isLeftLaneV, rightV: isRightLaneV, connections, hasUp, hasDown, hasLeft, hasRight });
+        info.set(`${x},${y}`, { topH: false, botH: false, leftV: false, rightV: false, connections, hasUp, hasDown, hasLeft, hasRight });
     });
 
     return { roads, info };
@@ -1656,20 +1650,16 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
             } else {
                 const candidates = [];
                 if (tileInfo.hasRight && !(curX+1 === prevX && curY === prevY)) {
-                    const t = roadTilesInfo.info.get(`${curX+1},${curY}`);
-                    if (t && !t.botH) candidates.push({x: curX+1, y: curY});
+                    candidates.push({x: curX+1, y: curY});
                 }
                 if (tileInfo.hasLeft && !(curX-1 === prevX && curY === prevY)) {
-                    const t = roadTilesInfo.info.get(`${curX-1},${curY}`);
-                    if (t && !t.topH) candidates.push({x: curX-1, y: curY});
+                    candidates.push({x: curX-1, y: curY});
                 }
                 if (tileInfo.hasDown && !(curX === prevX && curY+1 === prevY)) {
-                    const t = roadTilesInfo.info.get(`${curX},${curY+1}`);
-                    if (t && !t.rightV) candidates.push({x: curX, y: curY+1});
+                    candidates.push({x: curX, y: curY+1});
                 }
                 if (tileInfo.hasUp && !(curX === prevX && curY-1 === prevY)) {
-                    const t = roadTilesInfo.info.get(`${curX},${curY-1}`);
-                    if (t && !t.leftV) candidates.push({x: curX, y: curY-1});
+                    candidates.push({x: curX, y: curY-1});
                 }
                 
                 if (candidates.length > 0) {
@@ -1731,7 +1721,7 @@ const PopulationSystem = ({ population, grid }: { population: number, grid: Grid
     const walkableTiles = useMemo(() => {
         const tiles: {x: number, y: number}[] = [];
         grid.forEach(row => row.forEach(tile => {
-          if (tile.unlocked && (tile.buildingType === BuildingType.Road || tile.buildingType === BuildingType.ParkSmall || tile.buildingType === BuildingType.ParkLarge || tile.buildingType === BuildingType.None)) {
+          if (tile.unlocked && (tile.buildingType === BuildingType.Road || tile.buildingType === BuildingType.Avenue || tile.buildingType === BuildingType.ParkSmall || tile.buildingType === BuildingType.ParkLarge || tile.buildingType === BuildingType.None)) {
             tiles.push({x: tile.x, y: tile.y});
           }
         }));
@@ -1999,63 +1989,84 @@ const CameraController = () => {
 // --- 3. Main Map Component ---
 
 const RoadMarkings = React.memo(({ x, y, grid, yOffset }: { x: number; y: number; grid: Grid; yOffset: number }) => {
-  const lineMaterial = useMemo(() => new THREE.MeshStandardMaterial({ color: '#fbbf24', roughness: 0.8 }), []);
-  const lineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 1), []); // Full length line
-  const halfLineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 0.5), []);
-  const uTurnGeo = useMemo(() => new THREE.RingGeometry(0.2, 0.3, 16, 1, 0, Math.PI), []);
+  const lineMaterial = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8 }), []);
+  const lineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 0.4), []);
 
-  const hasUp = y > 0 && grid[y - 1][x].buildingType === BuildingType.Road;
-  const hasDown = y < GRID_SIZE - 1 && grid[y + 1][x].buildingType === BuildingType.Road;
-  const hasLeft = x > 0 && grid[y][x - 1].buildingType === BuildingType.Road;
-  const hasRight = x < GRID_SIZE - 1 && grid[y][x + 1].buildingType === BuildingType.Road;
-
-  const hasUpLeft = y > 0 && x > 0 && grid[y - 1][x - 1].buildingType === BuildingType.Road;
-  const hasUpRight = y > 0 && x < GRID_SIZE - 1 && grid[y - 1][x + 1].buildingType === BuildingType.Road;
-  const hasDownLeft = y < GRID_SIZE - 1 && x > 0 && grid[y + 1][x - 1].buildingType === BuildingType.Road;
-  const hasDownRight = y < GRID_SIZE - 1 && x < GRID_SIZE - 1 && grid[y + 1][x + 1].buildingType === BuildingType.Road;
-
-  // 2-lane detection
-  const isTopLaneH = hasDown && ((hasLeft && hasDownLeft) || (hasRight && hasDownRight));
-  const isBottomLaneH = hasUp && ((hasLeft && hasUpLeft) || (hasRight && hasUpRight));
-  const isLeftLaneV = hasRight && ((hasUp && hasUpRight) || (hasDown && hasDownRight));
-  const isRightLaneV = hasLeft && ((hasUp && hasUpLeft) || (hasDown && hasDownLeft));
-
-  const isIntersection = (isTopLaneH || isBottomLaneH) && (isLeftLaneV || isRightLaneV);
-  const connections = [hasUp, hasDown, hasLeft, hasRight].filter(Boolean).length;
-  const isDeadEnd = connections === 1;
+  const hasUp = y > 0 && (grid[y - 1][x].buildingType === BuildingType.Road || grid[y - 1][x].buildingType === BuildingType.Avenue);
+  const hasDown = y < GRID_SIZE - 1 && (grid[y + 1][x].buildingType === BuildingType.Road || grid[y + 1][x].buildingType === BuildingType.Avenue);
+  const hasLeft = x > 0 && (grid[y][x - 1].buildingType === BuildingType.Road || grid[y][x - 1].buildingType === BuildingType.Avenue);
+  const hasRight = x < GRID_SIZE - 1 && (grid[y][x + 1].buildingType === BuildingType.Road || grid[y][x + 1].buildingType === BuildingType.Avenue);
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, yOffset, 0]}>
-      {!isIntersection && isTopLaneH && (
-         <mesh position={[0, 0.5, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />
+      {hasUp && <mesh position={[0, -0.3, 0]} geometry={lineGeo} material={lineMaterial} />}
+      {hasDown && <mesh position={[0, 0.3, 0]} geometry={lineGeo} material={lineMaterial} />}
+      {hasLeft && <mesh position={[-0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />}
+      {hasRight && <mesh position={[0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />}
+    </group>
+  );
+});
+
+const AvenueMarkings = React.memo(({ x, y, grid, yOffset }: { x: number; y: number; grid: Grid; yOffset: number }) => {
+  const solidYellow = useMemo(() => new THREE.MeshStandardMaterial({ color: '#fbbf24', roughness: 0.8 }), []);
+  const dashedWhite = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8 }), []);
+  
+  const doubleLineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 1), []);
+  const dashedGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 0.5), []);
+
+  const hasUp = y > 0 && (grid[y - 1][x].buildingType === BuildingType.Avenue || grid[y - 1][x + 1]?.buildingType === BuildingType.Avenue);
+  const hasDown = y < GRID_SIZE - 2 && (grid[y + 2][x].buildingType === BuildingType.Avenue || grid[y + 2][x + 1]?.buildingType === BuildingType.Avenue);
+  const hasLeft = x > 0 && (grid[y][x - 1].buildingType === BuildingType.Avenue || grid[y + 1]?.[x - 1].buildingType === BuildingType.Avenue);
+  const hasRight = x < GRID_SIZE - 2 && (grid[y][x + 2].buildingType === BuildingType.Avenue || grid[y + 1]?.[x + 2].buildingType === BuildingType.Avenue);
+
+  const isVert = hasUp || hasDown;
+  const isHoriz = hasLeft || hasRight;
+  const isIntersection = isVert && isHoriz;
+
+  return (
+    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, yOffset, 0]}>
+      {/* Vertical Markings */}
+      {(hasUp || (isVert && !isIntersection)) && (
+         <group position={[0, -0.5, 0]}>
+            <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+            <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+            <mesh position={[-0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[-0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+         </group>
       )}
-      {!isIntersection && isLeftLaneV && (
-         <mesh position={[0.5, 0, 0]} geometry={lineGeo} material={lineMaterial} />
+      {hasDown && (
+         <group position={[0, 0.5, 0]}>
+            <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+            <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+            <mesh position={[-0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[-0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+         </group>
       )}
 
-      {/* Regular 1-lane markings */}
-      {!isTopLaneH && !isBottomLaneH && !isLeftLaneV && !isRightLaneV && connections > 1 && (
-        <>
-          {(hasUp || hasDown) && (hasLeft || hasRight) && (
-            <mesh position={[0, 0, 0.005]} material={lineMaterial}>
-               <planeGeometry args={[0.15, 0.15]} />
-            </mesh>
-          )}
-          {hasUp && <mesh position={[0, -0.25, 0]} geometry={halfLineGeo} material={lineMaterial} />}
-          {hasDown && <mesh position={[0, 0.25, 0]} geometry={halfLineGeo} material={lineMaterial} />}
-          {hasLeft && <mesh position={[-0.25, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={halfLineGeo} material={lineMaterial} />}
-          {hasRight && <mesh position={[0.25, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={halfLineGeo} material={lineMaterial} />}
-        </>
+      {/* Horizontal Markings */}
+      {(hasLeft || (isHoriz && !isIntersection)) && (
+         <group position={[-0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+            <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+            <mesh position={[-0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[-0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+         </group>
       )}
-
-      {/* Dead End U-Turns */}
-      {isDeadEnd && !isIntersection && (
-        <>
-           {hasUp && <mesh position={[0, 0.1, 0]} rotation={[0, 0, 0]} geometry={uTurnGeo} material={lineMaterial} />}
-           {hasDown && <mesh position={[0, -0.1, 0]} rotation={[0, 0, Math.PI]} geometry={uTurnGeo} material={lineMaterial} />}
-           {hasLeft && <mesh position={[0.1, 0, 0]} rotation={[0, 0, -Math.PI / 2]} geometry={uTurnGeo} material={lineMaterial} />}
-           {hasRight && <mesh position={[-0.1, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={uTurnGeo} material={lineMaterial} />}
-        </>
+      {hasRight && (
+         <group position={[0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+            <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+            <mesh position={[-0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[-0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[0.5, -0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+            <mesh position={[0.5, 0.25, 0]} geometry={dashedGeo} material={dashedWhite} />
+         </group>
       )}
     </group>
   );
@@ -2143,7 +2154,7 @@ const GroundInstances = React.memo(({ grid, hoveredTool }: { grid: Grid, hovered
               c = '#4ade80'; // Highlight empty grid distinctly during generic placement too
               topY = -0.28;
            }
-        } else if (tile.buildingType === BuildingType.Road) {
+        } else if (tile.buildingType === BuildingType.Road || tile.buildingType === BuildingType.Avenue) {
            c = '#374151'; topY = -0.29;
         } else {
            c = '#d1d5db'; topY = -0.28;
@@ -2277,32 +2288,6 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
             canPlacePreview = false;
          }
        }
-     }
-
-     if (canPlacePreview && hoveredTool === BuildingType.Road) {
-        const hx = hoveredTile.x, hy = hoveredTile.y;
-        for (let cy = hy - 2; cy <= hy; cy++) {
-            for (let cx = hx - 2; cx <= hx; cx++) {
-                let allRoads = true;
-                for (let dy = 0; dy < 3; dy++) {
-                    for (let dx = 0; dx < 3; dx++) {
-                        const checkX = cx + dx;
-                        const checkY = cy + dy;
-                        if (checkX < 0 || checkX >= GRID_SIZE || checkY < 0 || checkY >= GRID_SIZE) {
-                            allRoads = false; break;
-                        }
-                        if (checkX !== hx || checkY !== hy) {
-                            if (grid[checkY][checkX].buildingType !== BuildingType.Road) {
-                                allRoads = false; break;
-                            }
-                        }
-                    }
-                    if (!allRoads) break;
-                }
-                if (allRoads) { canPlacePreview = false; break; }
-            }
-            if (!canPlacePreview) break;
-        }
      }
   }
 
@@ -2439,6 +2424,15 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
                                <RoadMarkings x={x} y={y} grid={grid} yOffset={-0.289} />
                            </group>
                          );
+                     } else if (tile.buildingType === BuildingType.Avenue) {
+                         if ((tile.originX === undefined && tile.originY === undefined) || (tile.originX === x && tile.originY === y)) {
+                             const [wx, _, wz] = gridToWorld(x + 0.5, y + 0.5);
+                             elements.push(
+                               <group key={`avenue-${x}-${y}`} position={[wx, 0, wz]}>
+                                   <AvenueMarkings x={x} y={y} grid={grid} yOffset={-0.289} />
+                               </group>
+                             );
+                         }
                      } else if (tile.unlocked) {
                          // Only render once for multi-tile buildings
                          if ((tile.originX === undefined && tile.originY === undefined) || (tile.originX === x && tile.originY === y)) {

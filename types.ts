@@ -13,6 +13,7 @@ export enum BuildingCategory {
 export enum BuildingType {
   None = 'None',
   Road = 'Road',
+  Avenue = 'Avenue',
   BuyLand = 'BuyLand',
   
   // Residential

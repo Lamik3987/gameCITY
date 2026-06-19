@@ -6,7 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { BuildingType, CityStats, NewsItem, BuildingCategory } from '../types';
 import { BUILDINGS, MILESTONES } from '../constants';
-import { TutorialManager } from './TutorialManager';
+import { TutorialManager, TUTORIAL_STEPS } from './TutorialManager';
 import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut, Gift } from 'lucide-react';
 
 interface UIOverlayProps {
@@ -34,7 +34,8 @@ const ToolButton: React.FC<{
   level: number;
   setToastMsg: (msg: string) => void;
   dynamicCost?: number;
-}> = ({ type, isSelected, onClick, money, level, setToastMsg, dynamicCost }) => {
+  extraClass?: string;
+}> = ({ type, isSelected, onClick, money, level, setToastMsg, dynamicCost, extraClass }) => {
   const config = BUILDINGS[type];
   const actualCost = dynamicCost !== undefined ? dynamicCost : config.cost;
   const canAfford = money >= actualCost;
@@ -64,14 +65,12 @@ const ToolButton: React.FC<{
   };
 
   return (
-    <button
+    <button 
       onClick={handleClick}
       disabled={(!isBulldoze && !canAfford) && !isLocked}
-      className={`
-        relative flex flex-col items-center justify-center rounded-xl border-2 transition-all shadow-lg backdrop-blur-sm flex-shrink-0
-        w-16 h-16 md:w-20 md:h-20 overflow-hidden px-1
-        ${isSelected ? 'border-white bg-white/20 scale-110 z-10' : 'border-gray-600 bg-gray-900/80 hover:bg-gray-800'}
-        ${!isBulldoze && !canAfford && !isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+      className={`relative flex flex-col items-center p-2 md:p-3 rounded-xl border-2 transition-all min-w-[70px] md:min-w-[85px] 
+        ${isSelected ? 'bg-indigo-600/30 border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.5)] -translate-y-1' : 'border-transparent bg-gray-800/80 hover:bg-gray-700/80 hover:-translate-y-0.5'}
+        ${isLocked ? 'opacity-40 grayscale pointer-events-none' : ''} ${extraClass || ''}
       `}
       title={isLocked ? `Заблокировано до ур. ${config.minLevel}` : config.description}
     >
@@ -126,10 +125,14 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const currentTutorial = TutorialManager.getStep(tutorialStep);
 
   const getHighlightClass = (area: string) => {
-    if (currentTutorial && currentTutorial.highlightArea === area) {
-      return "z-50 ring-4 ring-yellow-400 rounded-2xl bg-black/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300";
+    if (currentTutorial) {
+      if (currentTutorial.highlightArea === area) {
+         return "z-50 ring-4 ring-yellow-400 bg-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300 pointer-events-auto animate-pulse";
+      } else {
+         return "pointer-events-none transition-all duration-300";
+      }
     }
-    return "z-10 transition-all duration-300";
+    return "z-10 transition-all duration-300 pointer-events-auto";
   };
 
   useEffect(() => {
@@ -140,6 +143,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   }, [toastMsg]);
 
   const completeTutorial = () => {
+     localStorage.setItem('polycity_tutorial_completed', 'true');
      setStats(prev => ({ ...prev, tutorialStep: 0, tutorialCompleted: true }));
   };
 
@@ -208,7 +212,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       
       {/* Dark Backdrop for Tutorial */}
       {currentTutorial && (
-        <div className="absolute inset-0 z-40 bg-black/60 pointer-events-auto transition-opacity duration-500 backdrop-blur-sm" />
+        <div className={`absolute inset-0 z-40 bg-black/60 transition-opacity duration-500 backdrop-blur-sm ${currentTutorial.actionRequired?.startsWith('place_') ? 'pointer-events-none' : 'pointer-events-auto'}`} />
       )}
 
       <div className="absolute top-2 left-2 md:top-4 md:left-4 pointer-events-auto flex flex-col gap-2 z-40 max-w-[calc(100vw-16px)] md:max-w-md">
@@ -332,49 +336,42 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
       </div>
 
-      {/* Dynamic Tutorial Modal - Replaced with Help button logic if needed, but keeping existing for now with help toggle */}
+      {/* Dynamic Tutorial Modal - Clash Royale style */}
       {currentTutorial && (
-         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] w-full max-w-md px-4 pointer-events-none">
-           <div className="bg-slate-900 border-2 border-indigo-500 p-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(99,102,241,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-hidden">
-
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] w-full max-w-[320px] px-2 pointer-events-none">
+           <div className="bg-slate-900 border-[3px] border-yellow-500 p-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(234,179,8,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-hidden">
              
              {/* Skip button */}
-             <button onPointerDown={(e) => { e.stopPropagation(); completeTutorial(); }} className="absolute top-3 right-3 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-xs">
-               <X size={14} /> Пропустить
+             <button onPointerDown={(e) => { e.stopPropagation(); completeTutorial(); }} className="absolute top-2 right-2 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[10px] bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
+               <X size={12} /> ПРОПУСТИТЬ
              </button>
 
-             <div className="mb-3 mt-4 flex justify-center">
-                <div className="bg-indigo-500 p-3 rounded-full shadow-lg shadow-indigo-500/30">
-                  <Tv className="text-white" size={28} />
+             <div className="mb-2 mt-6 flex justify-center">
+                <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-2 rounded-full shadow-lg shadow-yellow-500/30 border-2 border-white">
+                  <Tv className="text-white" size={32} />
                 </div>
              </div>
              
-             <h2 className="text-xl font-black text-white mb-2">{currentTutorial.title}</h2>
-             <p className="text-sm text-slate-300 mb-6 leading-relaxed">{currentTutorial.text}</p>
+             <h2 className="text-lg font-black text-white mb-2 tracking-wide uppercase">{currentTutorial.title}</h2>
+             <p className="text-xs text-slate-300 mb-4 leading-relaxed font-medium">{currentTutorial.text}</p>
              
-             {/* Navigation Buttons */}
-             <div className="flex gap-2">
-               {tutorialStep > 1 && (
-                 <button onPointerDown={(e) => { e.stopPropagation(); prevTutorialStep(); }} className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl text-sm transition-all active:scale-95">
-                   Назад
-                 </button>
-               )}
-               
-               {tutorialStep < 5 ? (
-                 <button onPointerDown={(e) => { e.stopPropagation(); nextTutorialStep(); }} className="flex-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(79,70,229,0.4)] transition-all active:scale-95">
-                   Далее
+             {/* Navigation Buttons or Action indicator */}
+             <div className="flex gap-2 w-full justify-center">
+               {!currentTutorial.actionRequired ? (
+                 <button onPointerDown={(e) => { e.stopPropagation(); if(tutorialStep === TUTORIAL_STEPS.length) completeTutorial(); else nextTutorialStep(); }} className="w-full bg-gradient-to-b from-green-400 to-green-600 hover:from-green-300 hover:to-green-500 text-white font-black py-3 rounded-xl text-sm shadow-[0_4px_0_rgb(21,128,61)] transition-all active:scale-95 active:translate-y-1">
+                   {tutorialStep === TUTORIAL_STEPS.length ? 'ИГРАТЬ!' : 'ПОНЯТНО'}
                  </button>
                ) : (
-                 <button onPointerDown={(e) => { e.stopPropagation(); completeTutorial(); }} className="flex-2 w-full bg-green-500 hover:bg-green-400 text-white font-black py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all active:scale-95">
-                   Начать Игру!
-                 </button>
+                 <div className="text-yellow-400 font-bold text-xs animate-pulse flex items-center gap-2">
+                   <Zap size={14} /> ВЫПОЛНИТЕ ДЕЙСТВИЕ...
+                 </div>
                )}
              </div>
 
              {/* Progress dots */}
-             <div className="flex justify-center gap-2 mt-4">
-                {[1,2,3,4,5].map(step => (
-                   <div key={step} className={`w-2 h-2 rounded-full ${tutorialStep === step ? 'bg-indigo-400' : 'bg-slate-700'}`}></div>
+             <div className="flex justify-center gap-1.5 mt-4">
+                {TUTORIAL_STEPS.map(step => (
+                   <div key={step.id} className={`w-1.5 h-1.5 rounded-full ${tutorialStep === step.id ? 'bg-yellow-400' : 'bg-slate-700'}`}></div>
                 ))}
              </div>
            </div>
@@ -576,8 +573,15 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${activeCategory === cat.id ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                onClick={() => {
+                   setActiveCategory(cat.id);
+                   if (currentTutorial) {
+                       if (currentTutorial.actionRequired === 'click_residential' && cat.id === BuildingCategory.Residential) nextTutorialStep();
+                       if (currentTutorial.actionRequired === 'click_commercial' && cat.id === BuildingCategory.Commercial) nextTutorialStep();
+                       if (currentTutorial.actionRequired === 'click_industrial' && cat.id === BuildingCategory.Industrial) nextTutorialStep();
+                   }
+                }}
+                className={`text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${getHighlightClass(`toolbar_${cat.id.toLowerCase()}`)} ${activeCategory === cat.id ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
               >
                 {cat.name}
               </button>
@@ -591,15 +595,21 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           {/* Collapse/Expand Toggle */}
           <button 
              onClick={() => setToolbarExpanded(!toolbarExpanded)}
-             className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-800 border border-gray-600 rounded-full p-0.5 text-gray-400 hover:text-white shadow-md z-20"
+             className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-800 border border-gray-600 rounded-full p-0.5 text-gray-400 hover:text-white shadow-md z-20 pointer-events-auto"
           >
              {toolbarExpanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
           </button>
 
           {toolbarExpanded ? (
             <div className="flex gap-1 md:gap-2 px-1 max-w-[90vw] overflow-x-auto custom-scrollbar py-2">
-              {activeTools.map((type) => (
-                <ToolButton
+              {activeTools.map((type) => {
+                 let highlightArea = '';
+                 if (type === BuildingType.HouseSmall) highlightArea = 'toolbar_small_house';
+                 if (type === BuildingType.ShopSmall) highlightArea = 'toolbar_store';
+                 if (type === BuildingType.FactorySmall) highlightArea = 'toolbar_factory';
+                 
+                 return (
+                 <ToolButton
                   key={type}
                   type={type}
                   isSelected={selectedTool === type}
@@ -608,8 +618,10 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                   level={stats.level}
                   setToastMsg={setToastMsg}
                   dynamicCost={dynamicCosts?.[type]}
+                  extraClass={highlightArea ? getHighlightClass(highlightArea) : "pointer-events-auto"}
                 />
-              ))}
+                 );
+              })}
             </div>
           ) : (
              <div className="px-6 py-1 text-[10px] font-bold text-gray-400 tracking-widest uppercase">Стройка свернута</div>

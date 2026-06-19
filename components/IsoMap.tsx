@@ -1713,7 +1713,7 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
   if (roadTilesInfo.roads.length < 2) return null;
 
   return (
-    <instancedMesh ref={carsRef} args={[boxGeo, undefined, carCount]} castShadow={false}>
+    <instancedMesh ref={carsRef} args={[boxGeo, undefined, carCount]} castShadow={false} frustumCulled={false}>
       <meshStandardMaterial roughness={0.5} metalness={0.3} />
     </instancedMesh>
   );
@@ -1835,7 +1835,7 @@ const PopulationSystem = ({ population, grid }: { population: number, grid: Grid
     if (agentCount === 0) return null;
 
     return (
-        <instancedMesh ref={meshRef} args={[boxGeo, undefined, agentCount]} castShadow={false}>
+        <instancedMesh ref={meshRef} args={[boxGeo, undefined, agentCount]} castShadow={false} frustumCulled={false}>
             <meshStandardMaterial roughness={0.8} />
         </instancedMesh>
     )
@@ -2221,7 +2221,7 @@ const GroundInstances = React.memo(({ grid, hoveredTool }: { grid: Grid, hovered
   }, [grid, hoveredTool]);
 
   return (
-    <instancedMesh ref={meshRef} args={[boxGeo, undefined, GRID_SIZE * GRID_SIZE]} receiveShadow={false} castShadow={false}>
+    <instancedMesh ref={meshRef} args={[boxGeo, undefined, GRID_SIZE * GRID_SIZE]} receiveShadow={false} castShadow={false} frustumCulled={false}>
       <meshStandardMaterial flatShading roughness={1} />
     </instancedMesh>
   );

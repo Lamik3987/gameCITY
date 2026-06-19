@@ -35,16 +35,19 @@ function App() {
   const [gameStarted, setGameStarted] = useState(false);
 
   const [grid, setGrid] = useState<Grid>(createInitialGrid);
-  const [stats, setStats] = useState<CityStats>({ 
-    money: INITIAL_MONEY, 
-    population: 0, 
-    day: 1,
-    level: 1,
-    timeOfDay: 0,
-    happiness: 50,
-    upgrades: { taxBoost: 0, roadDiscount: 0, parkBoost: 0 },
-    tutorialStep: 1,
-    tutorialCompleted: false
+  const [stats, setStats] = useState<CityStats>(() => {
+    const isTutorialGloballyDone = typeof localStorage !== 'undefined' && localStorage.getItem('polycity_tutorial_completed') === 'true';
+    return { 
+      money: INITIAL_MONEY, 
+      population: 0, 
+      day: 1,
+      level: 1,
+      timeOfDay: 0,
+      happiness: 50,
+      upgrades: { taxBoost: 0, roadDiscount: 0, parkBoost: 0 },
+      tutorialStep: isTutorialGloballyDone ? 0 : 1,
+      tutorialCompleted: isTutorialGloballyDone
+    };
   });
   const [selectedTool, setSelectedTool] = useState<BuildingType | null>(null);
   const [floatingTexts, setFloatingTexts] = useState<FloatingTextData[]>([]);
@@ -143,10 +146,13 @@ function App() {
                }));
            }
 
+           const isTutorialGloballyDone = localStorage.getItem('polycity_tutorial_completed') === 'true';
+           const isDone = isTutorialGloballyDone || parsed.stats.tutorialCompleted || false;
+           
            setStats({ 
               ...parsed.stats, 
-              tutorialCompleted: parsed.stats.tutorialCompleted || false,
-              tutorialStep: parsed.stats.tutorialStep ?? (parsed.stats.tutorialCompleted ? 0 : 1) 
+              tutorialCompleted: isDone,
+              tutorialStep: isDone ? 0 : (parsed.stats.tutorialStep ?? 1) 
            });
            setGrid(loadedGrid);
         }
@@ -547,7 +553,15 @@ function App() {
       const cost = Math.floor(buildingConfig.cost * (1 - discount));
 
       if (currentStats.money >= cost) {
-        setStats(prev => ({ ...prev, money: prev.money - cost }));
+        setStats(prev => {
+            let nextStep = prev.tutorialStep;
+            if (!prev.tutorialCompleted) {
+               if (nextStep === 3 && tool === BuildingType.HouseSmall) nextStep = 4;
+               else if (nextStep === 5 && tool === BuildingType.ShopSmall) nextStep = 6;
+               else if (nextStep === 7 && tool === BuildingType.FactorySmall) nextStep = 8;
+            }
+            return { ...prev, money: prev.money - cost, tutorialStep: nextStep };
+        });
         
         const newGrid = currentGrid.map(row => [...row]);
         for (let dy = 0; dy < bHeight; dy++) {

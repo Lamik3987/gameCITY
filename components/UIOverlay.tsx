@@ -4,8 +4,8 @@
 */
 import React, { useEffect, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { BuildingType, CityStats, NewsItem, BuildingCategory } from '../types';
-import { BUILDINGS, MILESTONES } from '../constants';
+import { BuildingType, CityStats, NewsItem, BuildingCategory, Grid } from '../types';
+import { BUILDINGS, MILESTONES, EconomyConfig } from '../constants';
 import { TutorialManager, TUTORIAL_STEPS } from './TutorialManager';
 import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut, Gift } from 'lucide-react';
 
@@ -16,6 +16,7 @@ interface UIOverlayProps {
   newsFeed: NewsItem[];
   onAdReward: (reward: string) => void;
   setStats: React.Dispatch<React.SetStateAction<CityStats>>;
+  grid: Grid;
 }
 
 const CATEGORIES = [
@@ -79,7 +80,7 @@ const ToolButton: React.FC<{
       </div>
       <span className="text-[8px] md:text-[9px] font-bold text-white uppercase tracking-wider drop-shadow-md leading-tight text-center break-words w-full px-1 max-h-[2.4em] overflow-hidden">{config.name}</span>
       {actualCost > 0 && !isLocked && (
-        <span className={`text-[9px] md:text-[10px] font-black leading-none mt-0.5 ${canAfford ? 'text-green-400' : 'text-red-400'}`}>${actualCost}</span>
+        <span className={`text-[9px] md:text-[10px] font-black leading-none mt-0.5 ${canAfford ? 'text-green-400' : 'text-red-400'}`}>${Math.floor(actualCost)}</span>
       )}
       
       {isLocked && (
@@ -91,17 +92,46 @@ const ToolButton: React.FC<{
   );
 };
 
-const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, number>; moneyError?: boolean; }> = ({
-  stats,
+const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, number>; moneyError?: boolean; }> = ({ stats,
   selectedTool,
   onSelectTool,
   newsFeed,
   onAdReward,
   setStats,
   dynamicCosts,
-  moneyError
-}) => {
+  moneyError,
+  grid }) => {
   const newsRef = useRef<HTMLDivElement>(null);
+
+  const dailyIncome = React.useMemo(() => {
+    if (!grid) return 0;
+    let income = EconomyConfig.passiveSubsidy;
+    const taxBoost = stats.upgrades?.taxBoost || 0;
+    
+    // 1. Citizen taxes
+    income += stats.population * EconomyConfig.taxPerPerson * (1 + taxBoost);
+    
+    // 2. Building incomes
+    grid.forEach(row => {
+      row.forEach(tile => {
+        if (tile.buildingType !== BuildingType.None && tile.unlocked) {
+          if (tile.originX !== undefined && (tile.originX !== tile.x || tile.originY !== tile.y)) {
+            return;
+          }
+          const config = BUILDINGS[tile.buildingType];
+          if (config && config.incomeGen > 0) {
+            income += config.incomeGen * (1 + taxBoost);
+          }
+        }
+      });
+    });
+    
+    return Math.floor(income);
+  }, [grid, stats.population, stats.upgrades?.taxBoost]);
+
+  const adRewardMoney = React.useMemo(() => {
+     return Math.round(1000 * Math.pow(2.5, stats.level - 1));
+  }, [stats.level]);
   
   const [upgradesVisible, setUpgradesVisible] = useState(false);
   const [newsVisible, setNewsVisible] = useState(false);
@@ -235,7 +265,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''} relative px-1`}>
             <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">Казна</span>
             <span className={`text-base md:text-2xl font-black font-mono drop-shadow-md transition-colors ${moneyError ? 'text-red-500' : 'text-green-400'} leading-tight`}>${Math.floor(stats.money).toLocaleString()}</span>
-            <span className="absolute -bottom-2 md:-bottom-3 left-1 text-[8px] md:text-[9px] font-black text-green-500">+{Math.floor(stats.population * 2 * (stats.happiness / 50) * (1 + (stats.upgrades?.taxBoost || 0)))}/д</span>
+            <span className="absolute -bottom-2 md:-bottom-3 left-1 text-[8px] md:text-[9px] font-black text-green-500">+${dailyIncome.toLocaleString()}/д</span>
           </div>
           <div className="w-px h-5 md:h-8 bg-gray-700"></div>
           <div className="flex flex-col relative min-w-[70px]">
@@ -429,11 +459,11 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                      <div className="bg-black/30 p-2 rounded-lg"><Tv className="text-green-400" size={24} /></div>
                      <div>
                        <h3 className="font-bold text-white text-sm">Грант от спонсоров</h3>
-                       <p className="text-xs text-slate-400">Посмотрите небольшой ролик, чтобы получить $5000 в казну моментально.</p>
+                       <p className="text-xs text-slate-400">Посмотрите небольшой ролик, чтобы получить ${adRewardMoney.toLocaleString()} в казну моментально.</p>
                      </div>
                   </div>
-                  <button onClick={() => { onAdReward('$5000'); setUpgradesVisible(false); }} className="mt-4 bg-green-600 hover:bg-green-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-green-900/50">
-                    Смотреть рекламу
+                  <button onClick={() => { onAdReward('AD_MONEY'); setUpgradesVisible(false); }} className="mt-4 bg-green-600 hover:bg-green-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-green-900/50">
+                    Смотреть рекламу (+${adRewardMoney.toLocaleString()})
                   </button>
                </div>
                

@@ -74,7 +74,7 @@ function App() {
       }
     }
     const baseExp = Math.max(0, unlockedCount - 1);
-    return Math.floor(500 * Math.pow(1.8, baseExp));
+    return Math.round(500 * Math.pow(1.25, baseExp));
   }, [grid]);
 
   const dynamicCosts = useMemo(() => ({
@@ -306,7 +306,7 @@ function App() {
       const smallHouses = buildingCounts[BuildingType.HouseSmall] || 0;
       const medHouses = buildingCounts[BuildingType.HouseMedium] || 0;
       const largeHouses = buildingCounts[BuildingType.HouseLarge] || 0;
-      const maxPop = smallHouses * 5 + medHouses * 15 + largeHouses * 30;
+      const maxPop = smallHouses * 8 + medHouses * 24 + largeHouses * 50;
 
       let newPop = prev.population + dailyPopGrowth;
       if (newPop > maxPop) newPop = maxPop; 
@@ -412,7 +412,7 @@ function App() {
      
      // Base $500. Exponential increase based on chunks unlocked
      const baseExp = Math.max(0, unlockedCount - 1); // center chunk is 1
-     const cost = Math.floor(500 * Math.pow(1.5, baseExp));
+     const cost = Math.round(500 * Math.pow(1.25, baseExp));
 
      if (statsRef.current.money < cost) {
        addNewsItem({id: Date.now().toString(), text: `Недостаточно средств на территорию. Нужно: $${cost}.`, type: 'negative'});
@@ -585,17 +585,17 @@ function App() {
   };
 
   const handleAdReward = (rewardStr: string) => {
-     // Stub logic for monetization
-     addNewsItem({id: Date.now().toString(), text: `Реклама просмотрена! Получена награда: ${rewardStr}`, type: 'positive'});
      sounds.playCoin();
-     if (rewardStr === '$5000') {
-         setStats(prev => ({...prev, money: prev.money + 5000}));
+     if (rewardStr === 'AD_MONEY') {
+         const adRewardMoney = Math.round(1000 * Math.pow(2.5, statsRef.current.level - 1));
+         setStats(prev => ({...prev, money: prev.money + adRewardMoney}));
+         addNewsItem({id: Date.now().toString(), text: `Реклама просмотрена! Получена награда: ${adRewardMoney.toLocaleString()}`, type: 'positive'});
      } else if (rewardStr === 'TAX_BOOST') {
-         // temporary state could be added here, simplified for now
+         addNewsItem({id: Date.now().toString(), text: "Реклама просмотрена! Активирован буст налогов!", type: 'positive'});
          setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 1}}));
          setTimeout(() => {
             setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 0}}));
-            addNewsItem({id: Date.now().toString(), text: `Эффект удвоения налогов завершен.`, type: 'neutral'});
+            addNewsItem({id: Date.now().toString(), text: "Эффект удвоения налогов завершен.", type: 'neutral'});
          }, 180000); // 3 minutes
      }
   };
@@ -628,6 +628,7 @@ function App() {
             setStats={setStats}
             dynamicCosts={dynamicCosts}
             moneyError={moneyError}
+            grid={grid}
           />
           {showLevelUp && (
              <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto">

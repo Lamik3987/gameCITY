@@ -107,6 +107,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const [upgradesVisible, setUpgradesVisible] = useState(false);
   const [newsVisible, setNewsVisible] = useState(true);
   const [newsMinimized, setNewsMinimized] = useState(false);
+  const [newsSize, setNewsSize] = useState({ width: 320, height: 200 });
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [adPopupVisible, setAdPopupVisible] = useState(false);
   const [volume, setVolume] = useState(50);
@@ -242,7 +243,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       </div>
 
       {/* Quests / Starter Goals */}
-      <div className={`absolute top-28 left-4 z-40 bg-gray-900/90 text-white p-3 rounded-xl border-l-4 border-l-indigo-500 shadow-xl backdrop-blur-md w-48 transition-all animate-fade-in ${getHighlightClass('center')}`}>
+      <div className={`absolute top-[200px] md:top-52 left-4 z-40 bg-gray-900/90 text-white p-3 rounded-xl border-l-4 border-l-indigo-500 shadow-xl backdrop-blur-md w-48 transition-all animate-fade-in ${getHighlightClass('center')}`}>
           <div className="flex items-center gap-2 mb-2 border-b border-gray-700 pb-1">
              <Target size={14} className="text-indigo-400"/>
              <span className="text-xs font-bold uppercase tracking-wider">Миссии Мэра</span>
@@ -454,11 +455,17 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
             width: 320,
             height: 200,
           }}
-          size={{ width: 320, height: newsMinimized ? 40 : 200 }}
-          enableResizing={false}
+          size={{ width: newsSize.width, height: newsMinimized ? 40 : newsSize.height }}
+          enableResizing={!newsMinimized}
           minWidth={250}
           minHeight={newsMinimized ? 40 : 150}
           bounds="parent"
+          onResize={(e, direction, ref) => {
+            setNewsSize({
+              width: parseInt(ref.style.width, 10),
+              height: parseInt(ref.style.height, 10),
+            });
+          }}
           dragHandleClassName="handle-news"
           onMouseDown={() => { setNewsZ(20); }}
           className="pointer-events-auto shadow-2xl"

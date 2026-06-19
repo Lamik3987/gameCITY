@@ -577,6 +577,9 @@ function App() {
         }
         sounds.playBuild();
         setGrid(newGrid);
+        if (!currentStats.tutorialCompleted) {
+           setSelectedTool(null);
+        }
       } else {
         addNewsItem({id: Date.now().toString() + Math.random(), text: `В казне недостаточно средств: ${buildingConfig.name}.`, type: 'negative'});
         triggerMoneyError();

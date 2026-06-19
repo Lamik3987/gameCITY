@@ -591,11 +591,11 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
       )}
 
-      <div className={`${getHighlightClass('toolbar')} absolute bottom-0 left-0 right-0 flex flex-col items-center pb-2 md:pb-4 px-2`}>
+      <div className={`${getHighlightClass('toolbar')} absolute bottom-0 left-0 right-0 flex flex-col items-center pb-2 md:pb-4 px-2 pb-safe`}>
         
         {/* Category Tabs */}
         {toolbarExpanded && (
-          <div className="flex gap-1 md:gap-2 mb-2 bg-gray-900/90 py-1 px-2 rounded-full border border-gray-700 backdrop-blur-md shadow-lg max-w-[90vw] overflow-x-auto custom-scrollbar pointer-events-auto">
+          <div className="flex gap-1 md:gap-2 mb-2 bg-gray-900/90 py-1 px-2 rounded-full border border-gray-700 backdrop-blur-md shadow-lg max-w-[95vw] md:max-w-[90vw] overflow-x-auto no-scrollbar pointer-events-auto">
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
@@ -622,7 +622,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           </button>
 
           {toolbarExpanded ? (
-            <div className="flex gap-1 md:gap-2 px-1 max-w-[90vw] overflow-x-auto custom-scrollbar py-2">
+            <div className="flex gap-1 md:gap-2 px-1 max-w-[95vw] md:max-w-[90vw] overflow-x-auto no-scrollbar py-2">
               {activeTools.map((type) => {
                  let highlightArea = '';
                  if (type === BuildingType.HouseSmall) highlightArea = 'toolbar_small_house';
@@ -650,8 +650,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
       </div>
       
-      {/* Footer info & Settings btn */}
-      <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2 pointer-events-auto mb-safe z-[60]">
+            {/* Settings btn in top-right */}
+      <div className="absolute top-2 right-2 md:top-4 md:right-4 pointer-events-auto z-[60]">
         <button 
           onClick={(e) => { e.stopPropagation(); setSettingsVisible(true); }} 
           onPointerDown={(e) => { e.stopPropagation(); setSettingsVisible(true); }}
@@ -659,7 +659,11 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         >
           <Settings size={18} />
         </button>
-        <div className="text-[8px] md:text-[9px] text-white/30 font-mono text-right hover:text-white/60 transition-colors">
+      </div>
+
+      {/* Footer info in bottom-right */}
+      <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 pointer-events-none z-[60]">
+        <div className="text-[8px] md:text-[9px] text-white/30 font-mono text-right hover:text-white/60 transition-colors pointer-events-auto">
           <a href="https://x.com/ammaar" target="_blank" rel="noreferrer">Создано @ammaar</a>
         </div>
       </div>

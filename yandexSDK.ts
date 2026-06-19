@@ -62,6 +62,15 @@ class YandexSDKWrapper {
                 },
                 onError: (e: any) => {
                     console.error('Error while opening video ad:', e);
+                    
+                    // Если мы тестируем локально или на тестовом сервере, и реклама не грузится, выдаем тестовую награду
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('onrender')) {
+                        console.log('[Dev] Fallback on error: Mocking reward.');
+                        onRewarded();
+                        if (onClose) onClose();
+                        return;
+                    }
+
                     if (onError) onError(e);
                     // Если ошибка, мы можем закрыть диалог или вызвать onClose
                     if (onClose) onClose();

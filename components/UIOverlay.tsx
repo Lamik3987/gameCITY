@@ -127,12 +127,20 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const getHighlightClass = (area: string) => {
     if (currentTutorial) {
       if (currentTutorial.highlightArea === area) {
-         return "z-50 ring-4 ring-yellow-400 bg-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300 pointer-events-auto animate-pulse";
+         return "z-[100] relative ring-4 ring-yellow-400 bg-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300 pointer-events-auto animate-pulse";
       } else {
          return "pointer-events-none transition-all duration-300";
       }
     }
-    return "z-10 transition-all duration-300 pointer-events-auto";
+    return "transition-all duration-300 pointer-events-auto";
+  };
+
+  const getTutorialModalPosition = () => {
+     if (!currentTutorial) return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
+     if (currentTutorial.highlightArea === "stats") return "top-24 left-4";
+     if (currentTutorial.highlightArea.startsWith("toolbar")) return "bottom-[180px] left-1/2 -translate-x-1/2";
+     if (currentTutorial.highlightArea === "missions_and_gift") return "top-1/2 left-4 -translate-y-1/2";
+     return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
   };
 
   useEffect(() => {
@@ -215,7 +223,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         <div className={`absolute inset-0 z-40 bg-black/60 transition-opacity duration-500 backdrop-blur-sm ${currentTutorial.actionRequired?.startsWith('place_') ? 'pointer-events-none' : 'pointer-events-auto'}`} />
       )}
 
-      <div className="absolute top-2 left-2 md:top-4 md:left-4 pointer-events-auto flex flex-col gap-2 z-40 max-w-[calc(100vw-16px)] md:max-w-md">
+      <div className="absolute top-2 left-2 md:top-4 md:left-4 pointer-events-none flex flex-col gap-2 z-auto max-w-[calc(100vw-16px)] md:max-w-md">
         <div className={`relative ${getHighlightClass('stats')} bg-gray-900/95 text-white p-1.5 md:p-3 rounded-xl border border-gray-700 shadow-xl backdrop-blur-md flex gap-2 md:gap-6 items-center w-full md:w-auto overflow-hidden`}>
           <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''} relative px-1`}>
             <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">Казна</span>
@@ -338,7 +346,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
       {/* Dynamic Tutorial Modal - Clash Royale style */}
       {currentTutorial && (
-         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] w-full max-w-[320px] px-2 pointer-events-none">
+         <div className={`absolute ${getTutorialModalPosition()} z-[120] w-full max-w-[320px] px-2 pointer-events-none transition-all duration-500`}>
            <div className="bg-slate-900 border-[3px] border-yellow-500 p-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(234,179,8,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-hidden">
              
              {/* Skip button */}
@@ -565,11 +573,11 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
       )}
 
-      <div className={`${getHighlightClass('toolbar')} absolute bottom-0 left-0 right-0 pointer-events-auto flex flex-col items-center pb-2 md:pb-4 px-2`}>
+      <div className={`${getHighlightClass('toolbar')} absolute bottom-0 left-0 right-0 flex flex-col items-center pb-2 md:pb-4 px-2`}>
         
         {/* Category Tabs */}
         {toolbarExpanded && (
-          <div className="flex gap-1 md:gap-2 mb-2 bg-gray-900/90 py-1 px-2 rounded-full border border-gray-700 backdrop-blur-md shadow-lg max-w-[90vw] overflow-x-auto custom-scrollbar">
+          <div className="flex gap-1 md:gap-2 mb-2 bg-gray-900/90 py-1 px-2 rounded-full border border-gray-700 backdrop-blur-md shadow-lg max-w-[90vw] overflow-x-auto custom-scrollbar pointer-events-auto">
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}

@@ -2350,7 +2350,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
   const previewPos = showPreview ? gridToWorld(cursorX + (bWidth - 1) / 2, cursorY + (bHeight - 1) / 2) : [0,0,0];
 
   return (
-    <div className="absolute inset-0 bg-slate-900 touch-none">
+    <div className="absolute inset-0 bg-[#10b981] touch-none">
       <Canvas shadows={false} dpr={[1, 1]} gl={{ antialias: false, powerPreference: "high-performance" }}>
         <OrthographicCamera makeDefault zoom={25} position={[40, 40, 40]} near={-100} far={200} />
         
@@ -2362,8 +2362,8 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
           dampingFactor={0.05}
           rotateSpeed={1.5}
           zoomSpeed={1.5}
-          minZoom={12}
-          maxZoom={typeof window !== 'undefined' && window.innerWidth <= 768 ? 45 : 70}
+          minZoom={25}
+          maxZoom={typeof window !== 'undefined' && window.innerWidth <= 768 ? 55 : 80}
           maxPolarAngle={Math.PI / 2.8}
           minPolarAngle={0.1}
           target={[0,-0.5,0]}

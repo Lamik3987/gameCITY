@@ -109,6 +109,10 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const [newsMinimized, setNewsMinimized] = useState(false);
   const [missionsExpanded, setMissionsExpanded] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [newsSize, setNewsSize] = useState({ width: 320, height: 200 });
+  const [newsPos, setNewsPos] = useState({ 
+    x: typeof window !== 'undefined' ? (window.innerWidth <= 768 ? 10 : window.innerWidth - 350) : 10, 
+    y: typeof window !== 'undefined' ? (window.innerHeight <= 768 ? window.innerHeight - 300 : window.innerHeight - 250) : 100 
+  });
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [adPopupVisible, setAdPopupVisible] = useState(false);
   const [volume, setVolume] = useState(50);
@@ -493,22 +497,19 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       {/* News Feed Panel */}
       {newsVisible && (
         <Rnd
-          default={{
-            x: window.innerWidth > 768 ? window.innerWidth - 340 : 16,
-            y: window.innerWidth > 768 ? window.innerHeight - 250 : window.innerHeight - 350,
-            width: 320,
-            height: 200,
-          }}
+          position={newsPos}
           size={{ width: newsSize.width, height: newsMinimized ? 40 : newsSize.height }}
           enableResizing={!newsMinimized}
           minWidth={250}
           minHeight={newsMinimized ? 40 : 150}
           bounds="parent"
-          onResize={(e, direction, ref) => {
+          onDragStop={(e, d) => setNewsPos({ x: d.x, y: d.y })}
+          onResize={(e, direction, ref, delta, position) => {
             setNewsSize({
               width: parseInt(ref.style.width, 10),
               height: parseInt(ref.style.height, 10),
             });
+            setNewsPos(position);
           }}
           dragHandleClassName="handle-news"
           onMouseDown={() => { setNewsZ(20); }}

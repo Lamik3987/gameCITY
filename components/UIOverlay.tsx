@@ -7,7 +7,7 @@ import { Rnd } from 'react-rnd';
 import { BuildingType, CityStats, NewsItem, BuildingCategory } from '../types';
 import { BUILDINGS, MILESTONES } from '../constants';
 import { TutorialManager } from './TutorialManager';
-import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings } from 'lucide-react';
+import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target } from 'lucide-react';
 
 interface UIOverlayProps {
   stats: CityStats;
@@ -51,25 +51,36 @@ const ToolButton: React.FC<{
     onClick();
   };
 
+  const getIcon = () => {
+    if (isBulldoze) return <Trash2 size={20} className="text-white" />;
+    if (type === BuildingType.Road) return <Map size={20} className="text-white" />;
+    switch(config.category) {
+      case BuildingCategory.Residential: return <Home size={20} className="text-white drop-shadow-md" />;
+      case BuildingCategory.Commercial: return <Store size={20} className="text-white drop-shadow-md" />;
+      case BuildingCategory.Industrial: return <Factory size={20} className="text-white drop-shadow-md" />;
+      case BuildingCategory.Decorations: return <TreePine size={20} className="text-white drop-shadow-md" />;
+      default: return <Building2 size={20} className="text-white drop-shadow-md" />;
+    }
+  };
+
   return (
     <button
       onClick={handleClick}
       disabled={(!isBulldoze && !canAfford) && !isLocked}
       className={`
-        relative flex flex-col items-center justify-center rounded-lg border-2 transition-all shadow-lg backdrop-blur-sm flex-shrink-0
-        w-14 h-14 md:w-16 md:h-16 overflow-hidden
+        relative flex flex-col items-center justify-center rounded-xl border-2 transition-all shadow-lg backdrop-blur-sm flex-shrink-0
+        w-16 h-16 md:w-20 md:h-20 overflow-hidden px-1
         ${isSelected ? 'border-white bg-white/20 scale-110 z-10' : 'border-gray-600 bg-gray-900/80 hover:bg-gray-800'}
         ${!isBulldoze && !canAfford && !isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
       `}
       title={isLocked ? `Заблокировано до ур. ${config.minLevel}` : config.description}
     >
-      <div className="w-6 h-6 md:w-8 md:h-8 rounded mb-0.5 md:mb-1 border border-black/30 shadow-inner flex items-center justify-center overflow-hidden" style={{ backgroundColor: isBulldoze ? 'transparent' : bgColor }}>
-        {isBulldoze && <div className="w-full h-full bg-red-600 text-white flex justify-center items-center font-bold text-base md:text-lg">✕</div>}
-        {type === BuildingType.Road && <div className="w-full h-2 bg-gray-800 transform -rotate-45"></div>}
+      <div className="w-8 h-8 rounded-full mb-1 flex items-center justify-center shadow-inner" style={{ backgroundColor: isBulldoze ? '#ef4444' : bgColor }}>
+        {getIcon()}
       </div>
-      <span className="text-[8px] md:text-[10px] font-bold text-white uppercase tracking-wider drop-shadow-md leading-none truncate max-w-full px-1">{config.name}</span>
+      <span className="text-[8px] md:text-[9px] font-bold text-white uppercase tracking-wider drop-shadow-md leading-tight text-center break-words w-full px-1 max-h-[2.4em] overflow-hidden">{config.name}</span>
       {actualCost > 0 && !isLocked && (
-        <span className={`text-[8px] md:text-[10px] font-mono leading-none ${canAfford ? 'text-green-300' : 'text-red-400'}`}>${actualCost}</span>
+        <span className={`text-[9px] md:text-[10px] font-black leading-none mt-0.5 ${canAfford ? 'text-green-400' : 'text-red-400'}`}>${actualCost}</span>
       )}
       
       {isLocked && (
@@ -188,9 +199,10 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
       <div className="absolute top-4 left-4 pointer-events-auto flex flex-col gap-2">
         <div className={`relative ${getHighlightClass('stats')} bg-gray-900/90 text-white p-2 md:p-3 rounded-xl border border-gray-700 shadow-2xl backdrop-blur-md flex gap-3 md:gap-6 items-center w-full md:w-auto`}>
-          <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''}`}>
+          <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''} relative`}>
             <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">Казна</span>
             <span className={`text-lg md:text-2xl font-black font-mono drop-shadow-md transition-colors ${moneyError ? 'text-red-500' : 'text-green-400'}`}>${Math.floor(stats.money).toLocaleString()}</span>
+            <span className="absolute -bottom-3 left-0 text-[9px] font-black text-green-500">+{Math.floor(stats.population * 2 * (stats.happiness / 50) * (1 + (stats.upgrades?.taxBoost || 0)))}/день</span>
           </div>
           <div className="w-px h-6 md:h-8 bg-gray-700"></div>
           <div className="flex flex-col relative min-w-[70px]">
@@ -229,10 +241,53 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
       </div>
 
-      {/* Dynamic Tutorial Modal */}
+      {/* Quests / Starter Goals */}
+      <div className={`absolute top-28 left-4 z-40 bg-gray-900/90 text-white p-3 rounded-xl border-l-4 border-l-indigo-500 shadow-xl backdrop-blur-md w-48 transition-all animate-fade-in ${getHighlightClass('center')}`}>
+          <div className="flex items-center gap-2 mb-2 border-b border-gray-700 pb-1">
+             <Target size={14} className="text-indigo-400"/>
+             <span className="text-xs font-bold uppercase tracking-wider">Миссии Мэра</span>
+          </div>
+          {stats.population < 15 ? (
+              <div className="text-[10px] space-y-1">
+                 <div className="flex justify-between items-center">
+                    <span>Постройте дома</span>
+                    <span className="text-indigo-300 font-bold">{stats.population}/15</span>
+                 </div>
+                 <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
+                    <div className="bg-indigo-500 h-full transition-all" style={{width: `${Math.min(100, (stats.population/15)*100)}%`}}></div>
+                 </div>
+                 <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Награда: $500</div>
+              </div>
+          ) : stats.level < 2 ? (
+              <div className="text-[10px] space-y-1">
+                 <div className="flex justify-between items-center">
+                    <span>Достигните 2 ур.</span>
+                    <span className="text-indigo-300 font-bold">{stats.level}/2</span>
+                 </div>
+                 <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
+                    <div className="bg-indigo-500 h-full transition-all" style={{width: `${stats.level >= 2 ? 100 : 50}%`}}></div>
+                 </div>
+                 <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Награда: $1500</div>
+              </div>
+          ) : (
+              <div className="text-[10px] space-y-1">
+                 <div className="flex justify-between items-center">
+                    <span>Счастье &gt; 80%</span>
+                    <span className="text-indigo-300 font-bold">{Math.floor(stats.happiness)}%</span>
+                 </div>
+                 <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden">
+                    <div className="bg-indigo-500 h-full transition-all" style={{width: `${Math.min(100, stats.happiness)}%`}}></div>
+                 </div>
+                 <div className="text-green-400 font-bold text-right pt-1 mt-1 border-t border-gray-800">Ежедневный доход +50%</div>
+              </div>
+          )}
+      </div>
+
+      {/* Dynamic Tutorial Modal - Replaced with Help button logic if needed, but keeping existing for now with help toggle */}
       {currentTutorial && (
          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] w-full max-w-md px-4 pointer-events-none">
            <div className="bg-slate-900 border-2 border-indigo-500 p-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(99,102,241,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-hidden">
+
              
              {/* Skip button */}
              <button onPointerDown={(e) => { e.stopPropagation(); completeTutorial(); }} className="absolute top-3 right-3 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-xs">

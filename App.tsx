@@ -9,6 +9,7 @@ import { wouldFormRoadBlock } from './roadUtils';
 import IsoMap from './components/IsoMap';
 import UIOverlay from './components/UIOverlay';
 import StartScreen from './components/StartScreen';
+import { sounds } from './components/soundEngine';
 
 const createInitialGrid = (): Grid => {
   const grid: Grid = [];
@@ -55,6 +56,7 @@ function App() {
 
   const triggerMoneyError = useCallback(() => {
     setMoneyError(true);
+    sounds.playError();
     if (moneyErrorTimeoutRef.current) clearTimeout(moneyErrorTimeoutRef.current);
     moneyErrorTimeoutRef.current = setTimeout(() => setMoneyError(false), 1000);
   }, []);
@@ -316,6 +318,7 @@ function App() {
       if (nextMilestone && newPop >= nextMilestone.requiredPop) {
         newLevel = nextMilestone.level;
         setShowLevelUp(newLevel);
+        sounds.playLevelUp();
         addNewsItem({ id: Date.now().toString(), text: `Уровень повышен! Добро пожаловать: ${nextMilestone.name}`, type: 'positive' });
       }
 
@@ -436,6 +439,7 @@ function App() {
         }
         return t;
      })));
+     sounds.playCoin();
      addNewsItem({id: Date.now().toString(), text: `Владения расширены (Куплено за $${cost})!`, type: 'positive'});
   }, [addNewsItem]);
 
@@ -498,6 +502,7 @@ function App() {
             }
             
             setGrid(newGrid);
+            sounds.playBuild();
             setStats(prev => ({ ...prev, money: Math.floor(prev.money - demolishCost) }));
         } else {
             addNewsItem({id: Date.now().toString(), text: `Снос стоит $${demolishCost}.`, type: 'negative'});
@@ -556,6 +561,7 @@ function App() {
               };
            }
         }
+        sounds.playBuild();
         setGrid(newGrid);
       } else {
         addNewsItem({id: Date.now().toString() + Math.random(), text: `В казне недостаточно средств: ${buildingConfig.name}.`, type: 'negative'});
@@ -573,6 +579,7 @@ function App() {
   const handleAdReward = (rewardStr: string) => {
      // Stub logic for monetization
      addNewsItem({id: Date.now().toString(), text: `Реклама просмотрена! Получена награда: ${rewardStr}`, type: 'positive'});
+     sounds.playCoin();
      if (rewardStr === '$5000') {
          setStats(prev => ({...prev, money: prev.money + 5000}));
      } else if (rewardStr === 'TAX_BOOST') {

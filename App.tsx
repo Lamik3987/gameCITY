@@ -40,7 +40,6 @@ function App() {
     level: 1,
     timeOfDay: 0,
     happiness: 50,
-    happiness: 50,
     upgrades: { taxBoost: 0, roadDiscount: 0, parkBoost: 0 },
     tutorialStep: 1,
     tutorialCompleted: false

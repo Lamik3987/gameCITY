@@ -30,16 +30,6 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
             Начать строительство
             </button>
 
-            <div className="mt-8 text-center">
-                <a 
-                    href="@bolshoidick" 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="inline-flex items-center gap-2 text-xs text-slate-500 hover:text-cyan-400 transition-colors font-mono group"
-                >
-                    <span>Создано</span>
-                    <span className="font-bold group-hover:underline decoration-cyan-500/50 underline-offset-2">@виталя геймс</span>
-                </a>
             </div>
         </div>
       </div>

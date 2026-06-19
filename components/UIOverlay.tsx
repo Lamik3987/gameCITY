@@ -601,11 +601,6 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                 key={cat.id}
                 onClick={() => {
                    setActiveCategory(cat.id);
-                   if (currentTutorial) {
-                       if (currentTutorial.actionRequired === 'click_residential' && cat.id === BuildingCategory.Residential) nextTutorialStep();
-                       if (currentTutorial.actionRequired === 'click_commercial' && cat.id === BuildingCategory.Commercial) nextTutorialStep();
-                       if (currentTutorial.actionRequired === 'click_industrial' && cat.id === BuildingCategory.Industrial) nextTutorialStep();
-                   }
                 }}
                 className={`relative text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${getHighlightClass(`toolbar_${cat.id.toLowerCase()}`)} ${activeCategory === cat.id ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
               >

@@ -5,7 +5,7 @@ export type TutorialStep = {
     title: string;
     text: string;
     highlightArea: string; // Used to block UI or highlight specific parts
-    actionRequired?: string; // 'click_residential', 'place_house', etc.
+    actionRequired?: string; // No longer used, but kept for type compatibility
 };
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
@@ -17,50 +17,26 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     },
     {
         id: 2,
-        title: "Строим первый дом",
-        text: "Людям негде жить! Откройте вкладку 'Жильё' в нижнем меню.",
-        highlightArea: "toolbar_residential",
-        actionRequired: "click_residential"
+        title: "Жилье",
+        text: "Здесь находятся жилые дома. Жителям нужно где-то жить! Стройте жилые зоны, чтобы увеличить население вашего города.",
+        highlightArea: "toolbar_residential"
     },
     {
         id: 3,
-        title: "Малый дом",
-        text: "Каждый дом дает прирост населения. Выберите 'Малый дом' и постройте его на траве рядом с дорогой!",
-        highlightArea: "toolbar_small_house",
-        actionRequired: "place_house"
+        title: "Коммерция",
+        text: "Здесь находятся коммерческие здания: магазины, торговые центры. В них жители тратят деньги, что приносит налоги в вашу казну!",
+        highlightArea: "toolbar_commercial"
     },
     {
         id: 4,
-        title: "Бизнес и налоги",
-        text: "Жителям нужно где-то работать и тратить деньги. Откройте вкладку 'Коммерция'.",
-        highlightArea: "toolbar_commercial",
-        actionRequired: "click_commercial"
+        title: "Промышленность",
+        text: "Здесь находятся фабрики и заводы. Они производят товары для магазинов и приносят большой доход, но загрязняют воздух рядом с домами!",
+        highlightArea: "toolbar_industrial"
     },
     {
         id: 5,
-        title: "Строим Магазин",
-        text: "Магазины приносят налоги в казну! Постройте один магазин недалеко от домов.",
-        highlightArea: "toolbar_store",
-        actionRequired: "place_store"
-    },
-    {
-        id: 6,
-        title: "Заводы и Экология",
-        text: "Теперь откройте вкладку 'Промышленность'. Нам нужны фабрики для снабжения магазинов.",
-        highlightArea: "toolbar_industrial",
-        actionRequired: "click_industrial"
-    },
-    {
-        id: 7,
-        title: "Осторожно, Загрязнение!",
-        text: "Заводы приносят много денег, но сильно загрязняют воздух. Обратите внимание на цвет клеток. Из-за загрязнения падает Счастье жителей! Старайтесь строить заводы подальше от домов. Постройте завод сейчас.",
-        highlightArea: "toolbar_factory",
-        actionRequired: "place_factory"
-    },
-    {
-        id: 8,
         title: "Миссии и Бонусы",
-        text: "Отлично! Слева вы видите Миссии, выполняя их, вы получаете награды. А если не хватает денег — жмите на светящийся Подарок! Удачи, Мэр!",
+        text: "Слева вы видите Миссии, за выполнение которых даются награды. А если не хватает денег — жмите на светящийся Подарок! Удачи, Мэр!",
         highlightArea: "missions_and_gift"
     }
 ];

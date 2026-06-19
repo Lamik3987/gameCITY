@@ -554,13 +554,7 @@ function App() {
 
       if (currentStats.money >= cost) {
         setStats(prev => {
-            let nextStep = prev.tutorialStep;
-            if (!prev.tutorialCompleted) {
-               if (nextStep === 3 && tool === BuildingType.HouseSmall) nextStep = 4;
-               else if (nextStep === 5 && tool === BuildingType.ShopSmall) nextStep = 6;
-               else if (nextStep === 7 && tool === BuildingType.FactorySmall) nextStep = 8;
-            }
-            return { ...prev, money: prev.money - cost, tutorialStep: nextStep };
+             return { ...prev, money: prev.money - cost };
         });
         
         const newGrid = currentGrid.map(row => [...row]);
@@ -577,9 +571,6 @@ function App() {
         }
         sounds.playBuild();
         setGrid(newGrid);
-        if (!currentStats.tutorialCompleted) {
-           setSelectedTool(null);
-        }
       } else {
         addNewsItem({id: Date.now().toString() + Math.random(), text: `В казне недостаточно средств: ${buildingConfig.name}.`, type: 'negative'});
         triggerMoneyError();

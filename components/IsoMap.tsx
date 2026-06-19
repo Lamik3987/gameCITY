@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { MathUtils } from 'three';
 import { Grid, BuildingType, TileData, CityStats, BuildingCategory, FloatingTextData } from '../types';
 import { GRID_SIZE, CHUNK_SIZE, BUILDINGS } from '../constants';
+import { getRoadBitmask, getBoulevardBonds, ROAD_N, ROAD_E, ROAD_S, ROAD_W } from '../roadUtils';
 
 // Fix for TypeScript not recognizing R3F elements in JSX
 declare global {
@@ -1539,18 +1540,17 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
     const roads: {x: number, y: number}[] = [];
     
     grid.forEach(row => row.forEach(tile => {
-      if (tile.buildingType === BuildingType.Road || tile.buildingType === BuildingType.Avenue) roads.push({x: tile.x, y: tile.y});
+      if (tile.buildingType === BuildingType.Road) roads.push({x: tile.x, y: tile.y});
     }));
 
     roads.forEach(r => {
         const x = r.x, y = r.y;
-        const hasUp = y > 0 && (grid[y - 1][x].buildingType === BuildingType.Road || grid[y - 1][x].buildingType === BuildingType.Avenue);
-        const hasDown = y < GRID_SIZE - 1 && (grid[y + 1][x].buildingType === BuildingType.Road || grid[y + 1][x].buildingType === BuildingType.Avenue);
-        const hasLeft = x > 0 && (grid[y][x - 1].buildingType === BuildingType.Road || grid[y][x - 1].buildingType === BuildingType.Avenue);
-        const hasRight = x < GRID_SIZE - 1 && (grid[y][x + 1].buildingType === BuildingType.Road || grid[y][x + 1].buildingType === BuildingType.Avenue);
+        const hasUp = y > 0 && grid[y - 1][x].buildingType === BuildingType.Road;
+        const hasDown = y < GRID_SIZE - 1 && grid[y + 1][x].buildingType === BuildingType.Road;
+        const hasLeft = x > 0 && grid[y][x - 1].buildingType === BuildingType.Road;
+        const hasRight = x < GRID_SIZE - 1 && grid[y][x + 1].buildingType === BuildingType.Road;
 
-        // Since Avenue visually handles its own 2-lane layout,
-        // we can just treat traffic nodes simply.
+        // We can just treat traffic nodes simply.
         // We'll keep the simplified logic for cars to turn correctly.
         const connections = [hasUp, hasDown, hasLeft, hasRight].filter(Boolean).length;
 
@@ -1626,9 +1626,18 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
           const ddy = oy - my;
           const dist = Math.sqrt(ddx*ddx + ddy*ddy);
           
-          // Check if car J is in front of car I (dot product > 0)
+          const odx = carsState.current[oIdx+2] - carsState.current[oIdx];
+          const ody = carsState.current[oIdx+3] - carsState.current[oIdx+1];
+          const olen = Math.sqrt(odx*odx + ody*ody) || 1;
+          const ondx = odx / olen;
+          const ondy = ody / olen;
+          
+          const dirDot = ndx * ondx + ndy * ondy;
+
+          // Check if car J is in front of car I (dot > 0)
           const dot = ddx * ndx + ddy * ndy;
-          if (dot > 0 && dist < 0.6) {
+          // Only collide if they are NOT going in opposite directions (dirDot > -0.5)
+          if (dirDot > -0.5 && dot > 0 && dist < 0.6) {
               speedMult = Math.min(speedMult, Math.max(0, (dist - 0.25) / 0.35));
           }
       }
@@ -1721,7 +1730,7 @@ const PopulationSystem = ({ population, grid }: { population: number, grid: Grid
     const walkableTiles = useMemo(() => {
         const tiles: {x: number, y: number}[] = [];
         grid.forEach(row => row.forEach(tile => {
-          if (tile.unlocked && (tile.buildingType === BuildingType.Road || tile.buildingType === BuildingType.Avenue || tile.buildingType === BuildingType.ParkSmall || tile.buildingType === BuildingType.ParkLarge || tile.buildingType === BuildingType.None)) {
+          if (tile.unlocked && (tile.buildingType === BuildingType.Road || tile.buildingType === BuildingType.ParkSmall || tile.buildingType === BuildingType.ParkLarge || tile.buildingType === BuildingType.None)) {
             tiles.push({x: tile.x, y: tile.y});
           }
         }));
@@ -1791,6 +1800,8 @@ const PopulationSystem = ({ population, grid }: { population: number, grid: Grid
                     const tt = validTargets[Math.floor(Math.random() * validTargets.length)];
                     tx = tt.x + getRandomRange(-0.4, 0.4);
                     ty = tt.y + getRandomRange(-0.4, 0.4);
+                    agentsState.current[idx+2] = tx;
+                    agentsState.current[idx+3] = ty;
                 }
             } else {
                 x += (dx/dist) * speed;
@@ -1988,77 +1999,56 @@ const CameraController = () => {
 
 // --- 3. Main Map Component ---
 
-const RoadMarkings = React.memo(({ x, y, grid, yOffset }: { x: number; y: number; grid: Grid; yOffset: number }) => {
+const RoadTileVisual = React.memo(({ x, y, grid, yOffset }: { x: number; y: number; grid: Grid; yOffset: number }) => {
   const lineMaterial = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8 }), []);
   const lineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 0.4), []);
 
-  const hasUp = y > 0 && (grid[y - 1][x].buildingType === BuildingType.Road || grid[y - 1][x].buildingType === BuildingType.Avenue);
-  const hasDown = y < GRID_SIZE - 1 && (grid[y + 1][x].buildingType === BuildingType.Road || grid[y + 1][x].buildingType === BuildingType.Avenue);
-  const hasLeft = x > 0 && (grid[y][x - 1].buildingType === BuildingType.Road || grid[y][x - 1].buildingType === BuildingType.Avenue);
-  const hasRight = x < GRID_SIZE - 1 && (grid[y][x + 1].buildingType === BuildingType.Road || grid[y][x + 1].buildingType === BuildingType.Avenue);
-
-  return (
-    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, yOffset, 0]}>
-      {hasUp && <mesh position={[0, -0.3, 0]} geometry={lineGeo} material={lineMaterial} />}
-      {hasDown && <mesh position={[0, 0.3, 0]} geometry={lineGeo} material={lineMaterial} />}
-      {hasLeft && <mesh position={[-0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />}
-      {hasRight && <mesh position={[0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />}
-    </group>
-  );
-});
-
-const AvenueMarkings = React.memo(({ x, y, grid, yOffset }: { x: number; y: number; grid: Grid; yOffset: number }) => {
   const solidYellow = useMemo(() => new THREE.MeshStandardMaterial({ color: '#fbbf24', roughness: 0.8 }), []);
   const edgeWhite = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.8 }), []);
   
   const doubleLineGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 1), []);
   const edgeGeo = useMemo(() => new THREE.PlaneGeometry(0.1, 1), []);
 
-  const hasUp = y > 0 && (grid[y - 1][x].buildingType === BuildingType.Avenue || grid[y - 1][x + 1]?.buildingType === BuildingType.Avenue);
-  const hasDown = y < GRID_SIZE - 2 && (grid[y + 2][x].buildingType === BuildingType.Avenue || grid[y + 2][x + 1]?.buildingType === BuildingType.Avenue);
-  const hasLeft = x > 0 && (grid[y][x - 1].buildingType === BuildingType.Avenue || grid[y + 1]?.[x - 1].buildingType === BuildingType.Avenue);
-  const hasRight = x < GRID_SIZE - 2 && (grid[y][x + 2].buildingType === BuildingType.Avenue || grid[y + 1]?.[x + 2].buildingType === BuildingType.Avenue);
-
-  const isVert = hasUp || hasDown;
-  const isHoriz = hasLeft || hasRight;
-  const isIntersection = isVert && isHoriz;
+  const mask = getRoadBitmask(grid, x, y);
+  const bonds = getBoulevardBonds(grid, x, y);
+  const isBoulevard = bonds !== 0;
 
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, yOffset, 0]}>
-      {/* Vertical Markings */}
-      {(hasUp || (isVert && !isIntersection)) && (
-         <group position={[0, -0.5, 0]}>
-            <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[-0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
-            <mesh position={[0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
-         </group>
-      )}
-      {(hasDown || (isVert && !isIntersection)) && (
-         <group position={[0, 0.5, 0]}>
-            <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[-0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
-            <mesh position={[0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
-         </group>
-      )}
+      {/* Standard dashed center lines */}
+      {!isBoulevard && (mask & ROAD_N) && <mesh position={[0, -0.3, 0]} geometry={lineGeo} material={lineMaterial} />}
+      {!isBoulevard && (mask & ROAD_S) && <mesh position={[0, 0.3, 0]} geometry={lineGeo} material={lineMaterial} />}
+      {!isBoulevard && (mask & ROAD_W) && <mesh position={[-0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />}
+      {!isBoulevard && (mask & ROAD_E) && <mesh position={[0.3, 0, 0]} rotation={[0, 0, Math.PI / 2]} geometry={lineGeo} material={lineMaterial} />}
 
-      {/* Horizontal Markings */}
-      {(hasLeft || (isHoriz && !isIntersection)) && (
-         <group position={[-0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[-0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
-            <mesh position={[0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
-         </group>
-      )}
-      {(hasRight || (isHoriz && !isIntersection)) && (
-         <group position={[0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-            <mesh position={[-0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[0.1, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
-            <mesh position={[-0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
-            <mesh position={[0.8, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
-         </group>
+      {/* Boulevard lines */}
+      {isBoulevard && (
+        <>
+          {(bonds & ROAD_E) && ( 
+            <group>
+              <mesh position={[0.45, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+              <mesh position={[-0.45, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
+            </group>
+          )}
+          {(bonds & ROAD_W) && ( 
+            <group>
+              <mesh position={[-0.45, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+              <mesh position={[0.45, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
+            </group>
+          )}
+          {(bonds & ROAD_N) && ( 
+            <group rotation={[0, 0, Math.PI / 2]}>
+              <mesh position={[0.45, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+              <mesh position={[-0.45, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
+            </group>
+          )}
+          {(bonds & ROAD_S) && ( 
+            <group rotation={[0, 0, Math.PI / 2]}>
+              <mesh position={[-0.45, 0, 0]} geometry={doubleLineGeo} material={solidYellow} />
+              <mesh position={[0.45, 0, 0]} geometry={edgeGeo} material={edgeWhite} />
+            </group>
+          )}
+        </>
       )}
     </group>
   );
@@ -2146,7 +2136,7 @@ const GroundInstances = React.memo(({ grid, hoveredTool }: { grid: Grid, hovered
               c = '#4ade80'; // Highlight empty grid distinctly during generic placement too
               topY = -0.28;
            }
-        } else if (tile.buildingType === BuildingType.Road || tile.buildingType === BuildingType.Avenue) {
+        } else if (tile.buildingType === BuildingType.Road) {
            c = '#374151'; topY = -0.29;
         } else {
            c = '#d1d5db'; topY = -0.28;
@@ -2413,18 +2403,9 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
                          const [wx, _, wz] = gridToWorld(x, y);
                          elements.push(
                            <group key={`road-${x}-${y}`} position={[wx, 0, wz]}>
-                               <RoadMarkings x={x} y={y} grid={grid} yOffset={-0.289} />
+                               <RoadTileVisual x={x} y={y} grid={grid} yOffset={-0.289} />
                            </group>
                          );
-                     } else if (tile.buildingType === BuildingType.Avenue) {
-                         if ((tile.originX === undefined && tile.originY === undefined) || (tile.originX === x && tile.originY === y)) {
-                             const [wx, _, wz] = gridToWorld(x + 0.5, y + 0.5);
-                             elements.push(
-                               <group key={`avenue-${x}-${y}`} position={[wx, 0, wz]}>
-                                   <AvenueMarkings x={x} y={y} grid={grid} yOffset={-0.289} />
-                               </group>
-                             );
-                         }
                      } else if (tile.unlocked) {
                          // Only render once for multi-tile buildings
                          if ((tile.originX === undefined && tile.originY === undefined) || (tile.originX === x && tile.originY === y)) {

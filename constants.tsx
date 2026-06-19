@@ -10,7 +10,7 @@ export const CHUNK_SIZE = 5;
 
 // Game Settings
 export const DAY_MS = 5000; // 1 in-game day = 5 real seconds
-export const INITIAL_MONEY = 1500;
+export const INITIAL_MONEY = 2500;
 
 export const EconomyConfig = {
   passiveSubsidy: 10,
@@ -74,18 +74,6 @@ export const BUILDINGS: Record<BuildingType, BuildingConfig> = {
     incomeGen: 0,
     minLevel: 1,
     width: 1, height: 1,
-  },
-  [BuildingType.Avenue]: {
-    type: BuildingType.Avenue,
-    category: BuildingCategory.Infrastructure,
-    cost: 40,
-    name: 'Шоссе',
-    description: 'Проспект (2x2)',
-    color: '#374151',
-    popGen: 0,
-    incomeGen: 0,
-    minLevel: 1,
-    width: 2, height: 2,
   },
   [BuildingType.HouseSmall]: {
     type: BuildingType.HouseSmall,

@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Grid, TileData, BuildingType, BuildingCategory, CityStats, NewsItem, FloatingTextData } from './types';
 import { GRID_SIZE, CHUNK_SIZE, BUILDINGS, DAY_MS, INITIAL_MONEY, MILESTONES, EconomyConfig } from './constants';
+import { wouldFormRoadBlock } from './roadUtils';
 import IsoMap from './components/IsoMap';
 import UIOverlay from './components/UIOverlay';
 import StartScreen from './components/StartScreen';
@@ -172,6 +173,9 @@ function App() {
   // --- Game Loop ---
   useEffect(() => {
     if (!gameStarted) return;
+    // Fast start, slow down as level increases.
+    const currentLevel = stats.level;
+    const dynamicDayMs = Math.min(5000, 1000 + currentLevel * 1000);
 
     const intervalId = setInterval(() => {
       const prev = statsRef.current;
@@ -367,10 +371,10 @@ function App() {
          }, 1500); // Dissolve after 1.5s
       }
 
-    }, DAY_MS);
+    }, dynamicDayMs);
 
     return () => clearInterval(intervalId);
-  }, [gameStarted, addNewsItem]);
+  }, [gameStarted, addNewsItem, stats.level]);
 
 
   // --- Interaction Logic ---
@@ -508,30 +512,7 @@ function App() {
 
     // Road 3x3 restriction logic
     if (tool === BuildingType.Road) {
-        let forms3x3 = false;
-        for (let cy = y - 2; cy <= y; cy++) {
-            for (let cx = x - 2; cx <= x; cx++) {
-                let allRoads = true;
-                for (let dy = 0; dy < 3; dy++) {
-                    for (let dx = 0; dx < 3; dx++) {
-                        const checkX = cx + dx;
-                        const checkY = cy + dy;
-                        if (checkX < 0 || checkX >= GRID_SIZE || checkY < 0 || checkY >= GRID_SIZE) {
-                            allRoads = false; break;
-                        }
-                        if (checkX !== x || checkY !== y) {
-                            if (currentGrid[checkY][checkX].buildingType !== BuildingType.Road) {
-                                allRoads = false; break;
-                            }
-                        }
-                    }
-                    if (!allRoads) break;
-                }
-                if (allRoads) { forms3x3 = true; break; }
-            }
-            if (forms3x3) break;
-        }
-        if (forms3x3) {
+        if (wouldFormRoadBlock(currentGrid, x, y)) {
             addNewsItem({id: Date.now().toString() + Math.random(), text: `Максимальная ширина дороги - 2 полосы!`, type: 'negative'});
             return;
         }

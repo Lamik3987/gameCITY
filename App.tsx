@@ -444,10 +444,6 @@ function App() {
     if (tool === BuildingType.BuyLand) {
        if (!currentTile.unlocked) {
           unlockChunk(x, y);
-          if (currentStats.tutorialStep === 4) {
-              setStats(prev => ({ ...prev, tutorialStep: 5 }));
-              setSelectedTool(null);
-          }
        }
        return;
     }
@@ -573,20 +569,6 @@ function App() {
            }
         }
         setGrid(newGrid);
-
-        // Tutorial Progression
-        if (currentStats.tutorialStep > 0) {
-            if (currentStats.tutorialStep === 1 && tool === BuildingType.Road) {
-                setStats(prev => ({ ...prev, tutorialStep: 2 }));
-                setSelectedTool(null);
-            } else if (currentStats.tutorialStep === 2 && tool === BuildingType.Residential) {
-                setStats(prev => ({ ...prev, tutorialStep: 3 }));
-                setSelectedTool(null);
-            } else if (currentStats.tutorialStep === 3 && tool === BuildingType.Industrial) {
-                setStats(prev => ({ ...prev, tutorialStep: 4 }));
-                setSelectedTool(null);
-            }
-        }
       } else {
         addNewsItem({id: Date.now().toString() + Math.random(), text: `В казне недостаточно средств: ${buildingConfig.name}.`, type: 'negative'});
         triggerMoneyError();

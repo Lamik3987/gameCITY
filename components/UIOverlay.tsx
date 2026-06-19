@@ -108,17 +108,11 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const tutorialStep = stats.tutorialStep || 0;
   const currentTutorial = TutorialManager.getStep(tutorialStep);
 
-  const getBtnClass = (actionId: string) => {
-    const blocked = TutorialManager.isUIBlocked(tutorialStep, actionId);
-    return `relative group ${blocked ? 'opacity-30 pointer-events-none' : ''}`;
-  };
-
-  const getOverlayClass = (toolType: BuildingType | string) => {
-      const isTarget = currentTutorial && (currentTutorial.targetTool === toolType || currentTutorial.targetUI === toolType);
-      if (isTarget) {
-          return "absolute inset-0 bg-yellow-400/20 rounded-xl animate-pulse ring-2 ring-yellow-400 pointer-events-none";
-      }
-      return "";
+  const getHighlightClass = (area: string) => {
+    if (currentTutorial && currentTutorial.highlightArea === area) {
+      return "relative z-50 ring-4 ring-yellow-400 rounded-2xl bg-black/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300";
+    }
+    return "relative z-10 transition-all duration-300";
   };
 
   useEffect(() => {
@@ -130,6 +124,14 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
   const completeTutorial = () => {
      setStats(prev => ({ ...prev, tutorialStep: 0, tutorialCompleted: true }));
+  };
+
+  const nextTutorialStep = () => {
+     setStats(prev => ({ ...prev, tutorialStep: (prev.tutorialStep || 0) + 1 }));
+  };
+
+  const prevTutorialStep = () => {
+     setStats(prev => ({ ...prev, tutorialStep: Math.max(1, (prev.tutorialStep || 0) - 1) }));
   };
 
   useEffect(() => {
@@ -173,8 +175,13 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   return (
     <div className="absolute inset-0 pointer-events-none p-2 md:p-4 font-sans z-10 overflow-hidden">
       
+      {/* Dark Backdrop for Tutorial */}
+      {currentTutorial && (
+        <div className="absolute inset-0 z-40 bg-black/60 pointer-events-auto transition-opacity duration-500 backdrop-blur-sm" />
+      )}
+
       <div className="absolute top-4 left-4 pointer-events-auto flex flex-col gap-2">
-        <div className="bg-gray-900/90 text-white p-2 md:p-3 rounded-xl border border-gray-700 shadow-2xl backdrop-blur-md flex gap-3 md:gap-6 items-center w-full md:w-auto">
+        <div className={`${getHighlightClass('stats')} bg-gray-900/90 text-white p-2 md:p-3 rounded-xl border border-gray-700 shadow-2xl backdrop-blur-md flex gap-3 md:gap-6 items-center w-full md:w-auto`}>
           <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''}`}>
             <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">Казна</span>
             <span className={`text-lg md:text-2xl font-black font-mono drop-shadow-md transition-colors ${moneyError ? 'text-red-500' : 'text-green-400'}`}>${Math.floor(stats.money).toLocaleString()}</span>
@@ -196,16 +203,13 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           </div>
         </div>
         
-        <div className="flex flex-col gap-2 items-start">
-           <div className={getBtnClass('upgrades')}>
-              <button 
-                onClick={() => setUpgradesVisible(true)}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-purple-400/50 transition-transform active:scale-95 text-xs"
-              >
-                <ShoppingBag size={14} /> Улучшения
-              </button>
-              <div className={getOverlayClass('upgrades')}></div>
-           </div>
+        <div className={`${getHighlightClass('top-buttons')} flex flex-col gap-2 items-start mt-2 p-1`}>
+           <button 
+             onClick={() => setUpgradesVisible(true)}
+             className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 px-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border border-purple-400/50 transition-transform active:scale-95 text-xs"
+           >
+             <ShoppingBag size={14} /> Улучшения
+           </button>
            {!newsVisible && (
             <button onClick={() => setNewsVisible(true)} className="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
               <AlertCircle size={14} /> Открыть Новости
@@ -216,28 +220,48 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
       {/* Dynamic Tutorial Modal */}
       {currentTutorial && (
-         <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-4 pointer-events-none">
-           <div className="bg-slate-900/95 border-2 border-indigo-500/80 p-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(99,102,241,0.5)] text-center backdrop-blur-sm pointer-events-auto transform animate-bounce-slight">
-             <div className="mb-3 flex justify-center">
-                <div className="bg-indigo-500 p-2 rounded-full shadow-lg shadow-indigo-500/30">
-                  <Check className="text-white" size={24} />
+         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] w-full max-w-md px-4 pointer-events-none">
+           <div className="bg-slate-900 border-2 border-indigo-500 p-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(99,102,241,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-hidden">
+             
+             {/* Skip button */}
+             <button onClick={completeTutorial} className="absolute top-3 right-3 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-xs">
+               <X size={14} /> Пропустить
+             </button>
+
+             <div className="mb-3 mt-4 flex justify-center">
+                <div className="bg-indigo-500 p-3 rounded-full shadow-lg shadow-indigo-500/30">
+                  <Tv className="text-white" size={28} />
                 </div>
              </div>
              
-             <h2 className="text-lg font-black text-white mb-2">{currentTutorial.title}</h2>
-             <p className="text-sm text-slate-300 mb-4 leading-relaxed">{currentTutorial.text}</p>
+             <h2 className="text-xl font-black text-white mb-2">{currentTutorial.title}</h2>
+             <p className="text-sm text-slate-300 mb-6 leading-relaxed">{currentTutorial.text}</p>
              
-             <div className="bg-slate-800/80 rounded-xl py-3 px-4 border border-slate-700">
-                <p className="text-indigo-300 font-bold text-sm animate-pulse flex items-center justify-center gap-2">
-                   {currentTutorial.actionRequired}
-                </p>
+             {/* Navigation Buttons */}
+             <div className="flex gap-2">
+               {tutorialStep > 1 && (
+                 <button onClick={prevTutorialStep} className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl text-sm transition-all active:scale-95">
+                   Назад
+                 </button>
+               )}
+               
+               {tutorialStep < 5 ? (
+                 <button onClick={nextTutorialStep} className="flex-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(79,70,229,0.4)] transition-all active:scale-95">
+                   Далее
+                 </button>
+               ) : (
+                 <button onClick={completeTutorial} className="flex-2 w-full bg-green-500 hover:bg-green-400 text-white font-black py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all active:scale-95">
+                   Начать Игру!
+                 </button>
+               )}
              </div>
 
-             {tutorialStep === 5 && (
-                <button onClick={completeTutorial} className="mt-4 w-full bg-green-500 hover:bg-green-400 text-white font-black py-3 rounded-xl text-sm shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all active:scale-95 text-lg">
-                   Завершить обучение
-                </button>
-             )}
+             {/* Progress dots */}
+             <div className="flex justify-center gap-2 mt-4">
+                {[1,2,3,4,5].map(step => (
+                   <div key={step} className={`w-2 h-2 rounded-full ${tutorialStep === step ? 'bg-indigo-400' : 'bg-slate-700'}`}></div>
+                ))}
+             </div>
            </div>
          </div>
       )}
@@ -424,8 +448,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
       )}
 
-      {/* Bottom Center Toolbar (Fixed) */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center mb-safe">
+      <div className={`${getHighlightClass('toolbar')} absolute bottom-0 left-0 right-0 pointer-events-auto flex flex-col items-center pb-2 md:pb-4 px-2`}>
         
         {/* Category Tabs */}
         {toolbarExpanded && (

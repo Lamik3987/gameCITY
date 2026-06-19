@@ -4,65 +4,44 @@ export type TutorialStep = {
     id: number;
     title: string;
     text: string;
-    targetTool?: BuildingType;
-    targetUI?: string;
-    actionRequired: string;
+    highlightArea: string; // 'center', 'stats', 'toolbar', 'top-buttons'
 };
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
     {
         id: 1,
         title: "Добро пожаловать, Мэр!",
-        text: "Вы только что вступили в должность. Первым делом городу нужна инфраструктура. Выберите инструмент «Дорога» и постройте вашу первую улицу.",
-        targetTool: BuildingType.Road,
-        actionRequired: "Постройте дорогу"
+        text: "Ваш новый город ждет! Давайте проведем небольшую экскурсию по основным элементам управления, чтобы вы быстрее освоились.",
+        highlightArea: "center"
     },
     {
         id: 2,
-        title: "Первые жители",
-        text: "Отлично! Теперь людям нужно где-то жить. Выберите Жилой дом (Жилье) и постройте его рядом с дорогой. Обратите внимание, что здания стоят денег.",
-        targetTool: BuildingType.Residential,
-        actionRequired: "Постройте жилой дом"
+        title: "Ваши Показатели",
+        text: "Здесь отображается ваш Бюджет, Население и Счастье жителей. Если счастье упадет, люди начнут уезжать, а налоги снизятся!",
+        highlightArea: "stats"
     },
     {
         id: 3,
-        title: "Экономика и Заводы",
-        text: "Чтобы город приносил доход, нужна промышленность. Выберите Промышленность и постройте завод. Он приносит налоги, но снижает счастье, если стоит близко к домам.",
-        targetTool: BuildingType.Industrial,
-        actionRequired: "Постройте завод"
+        title: "Панель Строительства",
+        text: "Внизу находятся инструменты: Инфраструктура (дороги), Зоны (дома, магазины, заводы) и Снос. Используйте их для застройки города.",
+        highlightArea: "toolbar"
     },
     {
         id: 4,
-        title: "Расширение границ",
-        text: "По мере роста городу понадобится больше места. Откройте инструмент «Снести/Территория», выберите покупку чанка (Территория) и кликните на серую зону карты.",
-        targetTool: BuildingType.BuyLand,
-        actionRequired: "Купите новую территорию"
+        title: "Улучшения и Новости",
+        text: "Здесь вы можете прокачивать город за очки уровня (кнопка Улучшения) и читать важные уведомления в разделе Новости.",
+        highlightArea: "top-buttons"
     },
     {
         id: 5,
-        title: "Улучшения",
-        text: "В левом верхнем углу находится кнопка «Улучшения». Там вы можете тратить очки уровня на развитие города (например, снизить стоимость дорог).",
-        targetUI: "upgrades",
-        actionRequired: "Нажмите 'Завершить обучение'"
+        title: "Вперед, к стройке!",
+        text: "Теперь вы готовы! Начните с постройки вашей первой дороги, а затем разместите рядом жилой дом. Удачи, Мэр!",
+        highlightArea: "center"
     }
 ];
 
 export class TutorialManager {
     static getStep(stepId: number): TutorialStep | undefined {
         return TUTORIAL_STEPS.find(s => s.id === stepId);
-    }
-
-    static isUIBlocked(currentStepId: number, uiElement: string | BuildingType): boolean {
-        if (currentStepId === 0) return false; // Tutorial completed
-        const step = this.getStep(currentStepId);
-        if (!step) return false;
-
-        if (step.targetTool !== undefined) {
-            return uiElement !== step.targetTool;
-        }
-        if (step.targetUI !== undefined) {
-            return uiElement !== step.targetUI;
-        }
-        return true; 
     }
 }

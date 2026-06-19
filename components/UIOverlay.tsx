@@ -497,8 +497,12 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       </div>
       
       {/* Footer info & Settings btn */}
-      <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2 pointer-events-auto mb-safe">
-        <button onPointerDown={(e) => { e.stopPropagation(); setSettingsVisible(true); }} className="bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-xl shadow-lg border border-gray-600 transition-colors">
+      <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2 pointer-events-auto mb-safe z-[60]">
+        <button 
+          onClick={(e) => { e.stopPropagation(); setSettingsVisible(true); }} 
+          onPointerDown={(e) => { e.stopPropagation(); setSettingsVisible(true); }}
+          className="bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-xl shadow-lg border border-gray-600 transition-colors pointer-events-auto cursor-pointer"
+        >
           <Settings size={18} />
         </button>
         <div className="text-[8px] md:text-[9px] text-white/30 font-mono text-right hover:text-white/60 transition-colors">

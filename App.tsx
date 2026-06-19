@@ -181,7 +181,7 @@ function App() {
   useEffect(() => {
     if (!gameStarted) return;
 
-    addNewsItem({ id: Date.now().toString(), text: "Добро пожаловать в SkyMetropolis. Генерация ландшафта завершена.", type: 'positive' });
+    addNewsItem({ id: Date.now().toString(), text: "Добро пожаловать в SkyCity. Строительство разрешено.", type: 'positive' });
     lastTimeRef.current = performance.now();
   }, [gameStarted, addNewsItem]);
 

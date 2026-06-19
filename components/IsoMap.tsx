@@ -2166,13 +2166,13 @@ const GroundInstances = React.memo(({ grid, hoveredTool }: { grid: Grid, hovered
            c = '#64748b'; topY = -0.4;
         } else if (isIndustrial) {
            // Industrial placement heatmap overlay:
-           // Calculate affected houses count within distance <= 4
-           let affectedCount = 0;
+           // Calculate minimum distance to any house
+           let minDist = 999;
            for (let hIndex = 0; hIndex < houses.length; hIndex++) {
              const house = houses[hIndex];
              const dist = Math.max(Math.abs(house.x - x), Math.abs(house.y - y));
-             if (dist <= 4) {
-               affectedCount++;
+             if (dist < minDist) {
+               minDist = dist;
              }
            }
 
@@ -2181,9 +2181,9 @@ const GroundInstances = React.memo(({ grid, hoveredTool }: { grid: Grid, hovered
              c = '#475569';
              topY = -0.32;
            } else {
-             if (affectedCount === 0) {
+             if (minDist > 4) {
                c = '#4ade80'; // Bright safe green
-             } else if (affectedCount <= 2) {
+             } else if (minDist > 2) {
                c = '#facc15'; // Bright warning yellow
              } else {
                c = '#f87171'; // Bright danger red

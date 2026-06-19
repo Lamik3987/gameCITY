@@ -127,12 +127,14 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const getHighlightClass = (area: string) => {
     if (currentTutorial) {
       if (currentTutorial.highlightArea === area) {
-         return "z-[100] relative ring-4 ring-yellow-400 bg-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300 pointer-events-auto animate-pulse";
+         return "z-[100] ring-4 ring-yellow-400 bg-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300 pointer-events-auto animate-pulse";
+      } else if (currentTutorial.highlightArea === 'missions_and_gift' && (area === 'center' || area === 'top-buttons')) {
+         return "z-[100] ring-4 ring-yellow-400 bg-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300 pointer-events-auto animate-pulse";
       } else if (area === 'toolbar' && currentTutorial.highlightArea.startsWith('toolbar')) {
          // Elevate the entire toolbar if any tool or category inside it is highlighted
-         return "z-[50] relative transition-all duration-300 pointer-events-none";
+         return "z-[50] transition-all duration-300 pointer-events-none";
       } else if (area === 'top-buttons' && currentTutorial.highlightArea.startsWith('top-buttons')) {
-         return "z-[50] relative transition-all duration-300 pointer-events-none";
+         return "z-[50] transition-all duration-300 pointer-events-none";
       } else {
          return "pointer-events-none transition-all duration-300";
       }
@@ -224,7 +226,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
     <div className="absolute inset-0 pointer-events-none p-2 md:p-4 font-sans z-10 overflow-hidden">
       
       {/* Dark Backdrop for Tutorial */}
-      {currentTutorial && (
+      {currentTutorial && selectedTool === null && (
         <div className={`absolute inset-0 z-40 bg-black/60 transition-opacity duration-500 backdrop-blur-sm ${currentTutorial.actionRequired?.startsWith('place_') ? 'pointer-events-none' : 'pointer-events-auto'}`} />
       )}
 
@@ -258,7 +260,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
         
         {/* Quests / Starter Goals */}
-        <div className={`w-full bg-gray-900/95 text-white p-2 md:p-3 rounded-xl border-l-4 border-l-indigo-500 shadow-xl backdrop-blur-md transition-all animate-fade-in ${getHighlightClass('center')}`}>
+        <div className={`relative w-full bg-gray-900/95 text-white p-2 md:p-3 rounded-xl border-l-4 border-l-indigo-500 shadow-xl backdrop-blur-md transition-all animate-fade-in ${getHighlightClass('center')}`}>
             <div 
                className={`flex items-center gap-2 ${missionsExpanded ? 'mb-2 border-b border-gray-700 pb-1' : ''} cursor-pointer select-none`}
                onPointerDown={(e) => { e.stopPropagation(); setMissionsExpanded(!missionsExpanded); }}
@@ -350,7 +352,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       </div>
 
       {/* Dynamic Tutorial Modal - Clash Royale style */}
-      {currentTutorial && (
+      {currentTutorial && selectedTool === null && (
          <div className={`absolute ${getTutorialModalPosition()} z-[120] w-full max-w-[320px] px-2 pointer-events-none transition-all duration-500`}>
            <div className="bg-slate-900 border-[3px] border-yellow-500 p-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(234,179,8,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-hidden">
              
@@ -594,7 +596,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                        if (currentTutorial.actionRequired === 'click_industrial' && cat.id === BuildingCategory.Industrial) nextTutorialStep();
                    }
                 }}
-                className={`text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${getHighlightClass(`toolbar_${cat.id.toLowerCase()}`)} ${activeCategory === cat.id ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                className={`relative text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${getHighlightClass(`toolbar_${cat.id.toLowerCase()}`)} ${activeCategory === cat.id ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
               >
                 {cat.name}
               </button>

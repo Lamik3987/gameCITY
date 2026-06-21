@@ -2388,7 +2388,6 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
 
         <EnvironmentSystem />
         
-        <Environment preset="city" />
 
         <EnvironmentEffects />
 

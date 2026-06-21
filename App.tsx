@@ -214,6 +214,11 @@ function App() {
     const dynamicDayMs = Math.min(5000, 1000 + currentLevel * 1000);
 
     const intervalId = setInterval(() => {
+      // Пауза, если вкладка не активна (свернута)
+      if (typeof document !== 'undefined' && document.hidden) {
+        return;
+      }
+
       const prev = statsRef.current;
       const currentGrid = gridRef.current;
 

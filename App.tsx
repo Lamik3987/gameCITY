@@ -13,6 +13,30 @@ import { sounds } from './components/soundEngine';
 import { yandexSDK } from './yandexSDK';
 import { safeGetItem, safeSetItem, safeRemoveItem } from './components/storage';
 
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ color: 'white', background: 'red', padding: 20, zIndex: 99999, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+          <h1>Something went wrong.</h1>
+          <pre>{this.state.error?.toString()}</pre>
+          <pre>{this.state.error?.stack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const createInitialGrid = (): Grid => {
   const grid: Grid = [];
   const centerChunkX = Math.floor((GRID_SIZE / CHUNK_SIZE) / 2);
@@ -633,6 +657,7 @@ function App() {
   };
 
   return (
+    <ErrorBoundary>
     <div className="relative w-screen h-[100dvh] overflow-hidden selection:bg-transparent selection:text-transparent bg-sky-900 pb-safe">
       {/* 3D Rendering Layer - Always visible now, providing background for start screen */}
       <IsoMap 
@@ -704,6 +729,7 @@ function App() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
+    </ErrorBoundary>
   );
 }
 

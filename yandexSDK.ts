@@ -4,6 +4,7 @@ declare global {
         ysdk: any;
     }
 }
+import { safeGetItem, safeSetItem } from './components/storage';
 
 class YandexSDKWrapper {
     private ysdk: any = null;

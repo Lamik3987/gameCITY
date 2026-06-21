@@ -9,6 +9,7 @@ import { BUILDINGS, MILESTONES, EconomyConfig } from '../constants';
 import { MISSIONS } from '../missions';
 import { sounds } from './soundEngine';
 import { TutorialManager, TUTORIAL_STEPS } from './TutorialManager';
+import { safeGetItem, safeSetItem, safeRemoveItem } from './storage';
 import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut, Gift } from 'lucide-react';
 
 interface UIOverlayProps {

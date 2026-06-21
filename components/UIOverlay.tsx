@@ -148,27 +148,27 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const [adPopupVisible, setAdPopupVisible] = useState(false);
   const [volume, setVolume] = useState(() => {
     if (typeof window !== 'undefined') {
-       return parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+       return parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
     }
     return 50;
   });
   const [sfxVolume, setSfxVolume] = useState(() => {
     if (typeof window !== 'undefined') {
-       return parseInt(localStorage.getItem('polycity_sfx_vol') || '50', 10);
+       return parseInt(safeGetItem('polycity_sfx_vol') || '50', 10);
     }
     return 50;
   });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('polycity_bgm_vol', volume.toString());
+      safeSetItem('polycity_bgm_vol', volume.toString());
     }
     sounds.setBgmVolume(volume / 100);
   }, [volume]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('polycity_sfx_vol', sfxVolume.toString());
+      safeSetItem('polycity_sfx_vol', sfxVolume.toString());
     }
     sounds.setSfxVolume(sfxVolume / 100);
   }, [sfxVolume]);
@@ -215,7 +215,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   }, [toastMsg]);
 
   const completeTutorial = () => {
-     localStorage.setItem('polycity_tutorial_completed', 'true');
+     safeSetItem('polycity_tutorial_completed', 'true');
      setStats(prev => ({ ...prev, tutorialStep: 0, tutorialCompleted: true }));
   };
 
@@ -570,7 +570,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                  <div className="pt-4 border-t border-slate-800 space-y-3">
                      <button 
                        onClick={() => { 
-                          localStorage.removeItem('polycity_tutorial_completed');
+                          safeRemoveItem('polycity_tutorial_completed');
                           setStats(prev => ({ ...prev, tutorialStep: 1, tutorialCompleted: false }));
                           setSettingsVisible(false);
                        }} 
@@ -579,7 +579,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                         Пройти обучение заново
                      </button>
                      
-                     <button onClick={() => { localStorage.removeItem('polycity_save'); window.location.reload(); }} className="w-full border border-red-500/50 hover:bg-red-500/20 text-red-400 font-bold py-2 rounded-xl text-sm transition-colors">
+                     <button onClick={() => { safeRemoveItem('polycity_save'); window.location.reload(); }} className="w-full border border-red-500/50 hover:bg-red-500/20 text-red-400 font-bold py-2 rounded-xl text-sm transition-colors">
                         Сбросить прогресс
                      </button>
                      <p className="text-[10px] text-center text-slate-500 mt-2">Осторожно, это удалит весь ваш город!</p>

@@ -11,6 +11,7 @@ import UIOverlay from './components/UIOverlay';
 import StartScreen from './components/StartScreen';
 import { sounds } from './components/soundEngine';
 import { yandexSDK } from './yandexSDK';
+import { safeGetItem, safeSetItem, safeRemoveItem } from './components/storage';
 
 const createInitialGrid = (): Grid => {
   const grid: Grid = [];
@@ -83,7 +84,7 @@ function App() {
                     }));
                 }
 
-                const isTutorialGloballyDone = localStorage.getItem('polycity_tutorial_completed') === 'true';
+                const isTutorialGloballyDone = safeGetItem('polycity_tutorial_completed') === 'true';
                 const isDone = isTutorialGloballyDone || parsed.stats.tutorialCompleted || false;
                 
                 setStats({ 
@@ -102,7 +103,7 @@ function App() {
 
   const [grid, setGrid] = useState<Grid>(createInitialGrid);
   const [stats, setStats] = useState<CityStats>(() => {
-    const isTutorialGloballyDone = typeof localStorage !== 'undefined' && localStorage.getItem('polycity_tutorial_completed') === 'true';
+    const isTutorialGloballyDone = safeGetItem('polycity_tutorial_completed') === 'true';
     return { 
       money: INITIAL_MONEY, 
       population: 0, 
@@ -584,7 +585,7 @@ function App() {
 
   const handleStart = () => {
     sounds.init();
-    const vol = parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+    const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
     sounds.setBgmVolume(0);
     yandexSDK.showFullscreenAd(() => {
         sounds.setBgmVolume(vol / 100);
@@ -616,12 +617,12 @@ function App() {
          undefined,
          // onClose
          () => {
-             const vol = parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+             const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
              sounds.setBgmVolume(vol / 100);
          },
          // onError
          (e) => {
-             const vol = parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+             const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
              sounds.setBgmVolume(vol / 100);
              addNewsItem({id: Date.now().toString(), text: "Ошибка загрузки рекламы. Попробуйте позже.", type: 'negative'});
          }
@@ -667,7 +668,7 @@ function App() {
                  <p className="text-cyan-200 text-sm mb-6">Продолжайте строить, чтобы открыть еще больше зданий.</p>
                  <button onClick={() => {
                      setShowLevelUp(null);
-                     const vol = parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+                     const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
                      sounds.setBgmVolume(0);
                      yandexSDK.showFullscreenAd(() => {
                          sounds.setBgmVolume(vol / 100);

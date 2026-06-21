@@ -68,10 +68,10 @@ class YandexSDKWrapper {
                 console.log('Data saved to Yandex Cloud');
             } catch (e) {
                 console.error('Failed to save to Yandex Cloud', e);
-                localStorage.setItem('polycity_save', JSON.stringify(data));
+                safeSetItem('polycity_save', JSON.stringify(data));
             }
         } else {
-            localStorage.setItem('polycity_save', JSON.stringify(data));
+            safeSetItem('polycity_save', JSON.stringify(data));
         }
     }
 
@@ -86,7 +86,7 @@ class YandexSDKWrapper {
                 console.error('Failed to load from Yandex Cloud', e);
             }
         }
-        const local = localStorage.getItem('polycity_save');
+        const local = safeGetItem('polycity_save');
         return local ? JSON.parse(local) : null;
     }
 

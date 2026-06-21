@@ -2297,11 +2297,11 @@ const FloatingLabels = ({ texts }: { texts: FloatingTextData[] }) => {
 }
 
 const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, floatingTexts = [] }) => {
-  const [hoveredTile, setHoveredTile] = useState<{x: number, y: number} | null>(null);
+  const [hoveredTile, setHoveredTile] = useState<{x: number, y: number, rotation: number} | null>(null);
   const pointerDownPos = useRef<{x: number, y: number} | null>(null);
 
-  const handleHover = useCallback((x: number, y: number) => {
-    setHoveredTile({ x, y });
+  const handleHover = useCallback((x: number, y: number, rotation: number) => {
+    setHoveredTile({ x, y, rotation });
   }, []);
 
   const handleLeave = useCallback(() => {
@@ -2320,8 +2320,9 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
   let cursorY = hoveredTile?.y || 0;
 
   if (hoveredTile && actToolConf && !isBulldoze && hoveredTool !== BuildingType.BuyLand) {
-     bWidth = actToolConf.width || 1;
-     bHeight = actToolConf.height || 1;
+     const isRotated = Math.abs(Math.sin(hoveredTile.rotation)) > 0.5;
+     bWidth = isRotated ? (actToolConf.height || 1) : (actToolConf.width || 1);
+     bHeight = isRotated ? (actToolConf.width || 1) : (actToolConf.height || 1);
      canPlacePreview = true;
      for (let dy=0; dy<bHeight; dy++) {
        for (let dx=0; dx<bWidth; dx++) {
@@ -2343,8 +2344,9 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
         cursorX = t.originX ?? hoveredTile.x;
         cursorY = t.originY ?? hoveredTile.y;
         const tgtConf = BUILDINGS[t.buildingType];
-        bWidth = tgtConf?.width || 1;
-        bHeight = tgtConf?.height || 1;
+        const isRotated = Math.abs(Math.sin(t.rotation || 0)) > 0.5;
+        bWidth = isRotated ? (tgtConf?.height || 1) : (tgtConf?.width || 1);
+        bHeight = isRotated ? (tgtConf?.width || 1) : (tgtConf?.height || 1);
      }
   }
 
@@ -2414,7 +2416,8 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
                const ay = Math.round(rawY);
                
                if (ax >= 0 && ax < GRID_SIZE && ay >= 0 && ay < GRID_SIZE) {
-                   handleHover(ax, ay);
+                   const rotation = getSnappedCameraAngle(e.camera);
+                   handleHover(ax, ay, rotation);
                } else {
                    handleLeave();
                }
@@ -2475,8 +2478,9 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
                          // Only render once for multi-tile buildings
                          if ((tile.originX === undefined && tile.originY === undefined) || (tile.originX === x && tile.originY === y)) {
                              const conf = BUILDINGS[tile.buildingType];
-                             const bw = conf?.width || 1;
-                             const bh = conf?.height || 1;
+                             const isRotated = Math.abs(Math.sin(tile.rotation || 0)) > 0.5;
+                             const bw = isRotated ? (conf?.height || 1) : (conf?.width || 1);
+                             const bh = isRotated ? (conf?.width || 1) : (conf?.height || 1);
                              const [wx, _, wz] = gridToWorld(x + (bw - 1) / 2, y + (bh - 1) / 2);
                              elements.push(
                                <group key={`${x}-${y}`} position={[wx, 0, wz]} raycast={() => null}>

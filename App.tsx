@@ -491,8 +491,9 @@ function App() {
             const actualConfig = BUILDINGS[currentTile.buildingType];
             const originX = currentTile.originX ?? x;
             const originY = currentTile.originY ?? y;
-            const bWidth = actualConfig ? actualConfig.width : 1;
-            const bHeight = actualConfig ? actualConfig.height : 1;
+            const isRotated = Math.abs(Math.sin(currentTile.rotation || 0)) > 0.5;
+            const bWidth = isRotated ? (actualConfig?.height || 1) : (actualConfig?.width || 1);
+            const bHeight = isRotated ? (actualConfig?.width || 1) : (actualConfig?.height || 1);
 
             const newGrid = currentGrid.map(row => [...row]);
             
@@ -522,14 +523,16 @@ function App() {
     }
 
     // Placement Logic
-    const bWidth = buildingConfig.width || 1;
-    const bHeight = buildingConfig.height || 1;
+      const isRotated = Math.abs(Math.sin(rotation)) > 0.5;
+      const bWidth = isRotated ? (buildingConfig.height || 1) : (buildingConfig.width || 1);
+      const bHeight = isRotated ? (buildingConfig.width || 1) : (buildingConfig.height || 1);
 
-    // Check bounds
-    if (x + bWidth > GRID_SIZE || y + bHeight > GRID_SIZE) {
-        addNewsItem({id: Date.now().toString() + Math.random(), text: `Здание выходит за границы карты!`, type: 'negative'});
+      // Check boundaries
+      if (x + bWidth > GRID_SIZE || y + bHeight > GRID_SIZE) {
+        addNewsItem({id: Date.now().toString() + Math.random(), text: `Здание выходит за пределы карты.`, type: 'negative'});
+        sounds.playError();
         return;
-    }
+      }
 
     // Road 3x3 restriction logic
     if (tool === BuildingType.Road) {

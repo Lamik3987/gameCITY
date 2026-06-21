@@ -9,6 +9,19 @@ class SoundEngine {
     init() {
         if (!this.ctx) {
             this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            
+            // Handle Yandex Games requirement 1.3: Sound outside game
+            if (typeof document !== 'undefined') {
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        if (this.ctx?.state === 'running') this.ctx.suspend();
+                        if (this.bgm && !this.bgm.paused) this.bgm.pause();
+                    } else {
+                        if (this.ctx?.state === 'suspended') this.ctx.resume();
+                        if (this.bgm && this.bgmVolume > 0) this.bgm.play().catch(() => {});
+                    }
+                });
+            }
         }
         if (this.ctx.state === 'suspended') {
             this.ctx.resume();

@@ -36,7 +36,68 @@ function App() {
   const [gameStarted, setGameStarted] = useState(false);
 
   useEffect(() => {
-     yandexSDK.init();
+     yandexSDK.init().then(async () => {
+         try {
+             const parsed = await yandexSDK.loadData();
+             if (parsed && parsed.stats && parsed.grid) {
+                let loadedGrid = parsed.grid;
+                
+                // If the grid size changed, we need to adapt the old grid to the new dimensions
+                let oldHeight = loadedGrid.length;
+                let oldWidth = loadedGrid[0] ? loadedGrid[0].length : 0;
+                if (oldHeight !== GRID_SIZE || oldWidth !== GRID_SIZE) {
+                    const newGrid = createInitialGrid();
+                    
+                    // Calculate offset to recenter the old city into the new grid
+                    const offsetY = Math.floor((GRID_SIZE - oldHeight) / 2);
+                    const offsetX = Math.floor((GRID_SIZE - oldWidth) / 2);
+                    
+                    for (let y = 0; y < oldHeight; y++) {
+                      for (let x = 0; x < oldWidth; x++) {
+                        const ny = y + offsetY;
+                        const nx = x + offsetX;
+                        if (ny >= 0 && ny < GRID_SIZE && nx >= 0 && nx < GRID_SIZE) {
+                          if (loadedGrid[y] && loadedGrid[y][x]) {
+                              let bType = loadedGrid[y][x].buildingType;
+                              // Map legacy inline
+                              if (bType === 'Residential') bType = 'HouseSmall';
+                              if (bType === 'Commercial') bType = 'ShopSmall';
+                              if (bType === 'Industrial') bType = 'FactorySmall';
+                              if (bType === 'Park') bType = 'ParkSmall';
+                              
+                              newGrid[ny][nx].buildingType = bType;
+                              newGrid[ny][nx].unlocked = loadedGrid[y][x].unlocked;
+                          }
+                        }
+                      }
+                    }
+                    loadedGrid = newGrid;
+                } else {
+                    // Map legacy building types
+                    loadedGrid.forEach((row: any) => row && row.forEach((t: any) => {
+                      if (!t) return;
+                      if (t.buildingType === 'Residential') { t.buildingType = 'HouseSmall'; }
+                      if (t.buildingType === 'Commercial') { t.buildingType = 'ShopSmall'; }
+                      if (t.buildingType === 'Industrial') { t.buildingType = 'FactorySmall'; }
+                      if (t.buildingType === 'Park') { t.buildingType = 'ParkSmall'; }
+                    }));
+                }
+
+                const isTutorialGloballyDone = localStorage.getItem('polycity_tutorial_completed') === 'true';
+                const isDone = isTutorialGloballyDone || parsed.stats.tutorialCompleted || false;
+                
+                setStats({ 
+                   ...parsed.stats, 
+                   tutorialCompleted: isDone,
+                   tutorialStep: isDone ? 0 : (parsed.stats.tutorialStep ?? 1),
+                   currentMissionIndex: parsed.stats.currentMissionIndex ?? 0
+                });
+                setGrid(loadedGrid);
+             }
+         } catch (e) {
+             console.error("Failed to load save from Yandex Cloud", e);
+         }
+     });
   }, []);
 
   const [grid, setGrid] = useState<Grid>(createInitialGrid);
@@ -104,75 +165,9 @@ function App() {
 
   // --- Load / Save ---
   useEffect(() => {
-    const saved = localStorage.getItem('polycity_save');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.stats && parsed.grid) {
-           let loadedGrid = parsed.grid;
-           
-           // If the grid size changed, we need to adapt the old grid to the new dimensions
-           let oldHeight = loadedGrid.length;
-           let oldWidth = loadedGrid[0] ? loadedGrid[0].length : 0;
-           if (oldHeight !== GRID_SIZE || oldWidth !== GRID_SIZE) {
-               const newGrid = createInitialGrid();
-               
-               // Calculate offset to recenter the old city into the new grid
-               const offsetY = Math.floor((GRID_SIZE - oldHeight) / 2);
-               const offsetX = Math.floor((GRID_SIZE - oldWidth) / 2);
-               
-               for (let y = 0; y < oldHeight; y++) {
-                 for (let x = 0; x < oldWidth; x++) {
-                   const ny = y + offsetY;
-                   const nx = x + offsetX;
-                   if (ny >= 0 && ny < GRID_SIZE && nx >= 0 && nx < GRID_SIZE) {
-                     if (loadedGrid[y] && loadedGrid[y][x]) {
-                         let bType = loadedGrid[y][x].buildingType;
-                         // Map legacy inline
-                         if (bType === 'Residential') bType = 'HouseSmall';
-                         if (bType === 'Commercial') bType = 'ShopSmall';
-                         if (bType === 'Industrial') bType = 'FactorySmall';
-                         if (bType === 'Park') bType = 'ParkSmall';
-                         
-                         newGrid[ny][nx].buildingType = bType;
-                         newGrid[ny][nx].unlocked = loadedGrid[y][x].unlocked;
-                     }
-                   }
-                 }
-               }
-               loadedGrid = newGrid;
-           } else {
-               // Map legacy building types
-               loadedGrid.forEach((row: any) => row && row.forEach((t: any) => {
-                 if (!t) return;
-                 if (t.buildingType === 'Residential') { t.buildingType = 'HouseSmall'; }
-                 if (t.buildingType === 'Commercial') { t.buildingType = 'ShopSmall'; }
-                 if (t.buildingType === 'Industrial') { t.buildingType = 'FactorySmall'; }
-                 if (t.buildingType === 'Park') { t.buildingType = 'ParkSmall'; }
-               }));
-           }
-
-           const isTutorialGloballyDone = localStorage.getItem('polycity_tutorial_completed') === 'true';
-           const isDone = isTutorialGloballyDone || parsed.stats.tutorialCompleted || false;
-           
-           setStats({ 
-              ...parsed.stats, 
-              tutorialCompleted: isDone,
-              tutorialStep: isDone ? 0 : (parsed.stats.tutorialStep ?? 1),
-              currentMissionIndex: parsed.stats.currentMissionIndex ?? 0
-           });
-           setGrid(loadedGrid);
-        }
-      } catch (e) {
-        console.error("Failed to load save", e);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     if (!gameStarted) return;
     const saveInterval = setInterval(() => {
-       localStorage.setItem('polycity_save', JSON.stringify({ grid: gridRef.current, stats: statsRef.current }));
+       yandexSDK.saveData({ grid: gridRef.current, stats: statsRef.current });
     }, 10000);
     return () => clearInterval(saveInterval);
   }, [gameStarted]);
@@ -589,7 +584,12 @@ function App() {
 
   const handleStart = () => {
     sounds.init();
-    setGameStarted(true);
+    const vol = parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+    sounds.setBgmVolume(0);
+    yandexSDK.showFullscreenAd(() => {
+        sounds.setBgmVolume(vol / 100);
+        setGameStarted(true);
+    });
   };
 
   const handleAdReward = (rewardStr: string) => {
@@ -665,7 +665,14 @@ function App() {
                  <div className="text-6xl my-4">🎉</div>
                  <p className="text-white text-xl font-bold mb-1">Вы достигли {showLevelUp} уровня!</p>
                  <p className="text-cyan-200 text-sm mb-6">Продолжайте строить, чтобы открыть еще больше зданий.</p>
-                 <button onClick={() => setShowLevelUp(null)} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">Продолжить</button>
+                 <button onClick={() => {
+                     setShowLevelUp(null);
+                     const vol = parseInt(localStorage.getItem('polycity_bgm_vol') || '50', 10);
+                     sounds.setBgmVolume(0);
+                     yandexSDK.showFullscreenAd(() => {
+                         sounds.setBgmVolume(vol / 100);
+                     });
+                  }} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">Продолжить</button>
                </div>
              </div>
           )}

@@ -7,6 +7,7 @@ declare global {
 
 class YandexSDKWrapper {
     private ysdk: any = null;
+    private player: any = null;
     private initialized = false;
 
     async init() {
@@ -22,12 +23,71 @@ class YandexSDKWrapper {
                     this.ysdk.features.LoadingAPI.ready();
                     console.log('Yandex LoadingAPI ready called');
                 }
+                try {
+                    this.player = await this.ysdk.getPlayer();
+                    console.log('Yandex Player initialized');
+                } catch(e) {
+                    console.warn('Failed to init Yandex Player (auth maybe required):', e);
+                }
             } else {
                 console.warn('YaGames SDK script not loaded or not running in Yandex environment.');
             }
         } catch (e) {
             console.error('Failed to initialize Yandex Games SDK:', e);
         }
+    }
+
+    /**
+     * Показывает полноэкранную рекламу.
+     */
+    showFullscreenAd(onClose?: (wasShown: boolean) => void) {
+        if (!this.initialized || !this.ysdk) {
+            console.log('[Dev] Mocking Yandex Fullscreen Ad');
+            if (onClose) onClose(false);
+            return;
+        }
+
+        this.ysdk.adv.showFullscreenAdv({
+            callbacks: {
+                onClose: (wasShown: boolean) => {
+                    console.log('Fullscreen ad closed, wasShown:', wasShown);
+                    if (onClose) onClose(wasShown);
+                },
+                onError: (error: any) => {
+                    console.error('Error while opening fullscreen ad:', error);
+                    if (onClose) onClose(false);
+                }
+            }
+        });
+    }
+
+    async saveData(data: any): Promise<void> {
+        if (this.player) {
+            try {
+                await this.player.setData(data);
+                console.log('Data saved to Yandex Cloud');
+            } catch (e) {
+                console.error('Failed to save to Yandex Cloud', e);
+                localStorage.setItem('polycity_save', JSON.stringify(data));
+            }
+        } else {
+            localStorage.setItem('polycity_save', JSON.stringify(data));
+        }
+    }
+
+    async loadData(): Promise<any> {
+        if (this.player) {
+            try {
+                const data = await this.player.getData();
+                if (data && Object.keys(data).length > 0) {
+                    return data;
+                }
+            } catch (e) {
+                console.error('Failed to load from Yandex Cloud', e);
+            }
+        }
+        const local = localStorage.getItem('polycity_save');
+        return local ? JSON.parse(local) : null;
     }
 
     /**

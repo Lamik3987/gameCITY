@@ -483,42 +483,36 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-white text-sm">Налоги +10%</h3>
-                    <p className="text-xs text-slate-400 mt-1">Доход от всех зданий увеличивается навсегда.</p>
+               <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-blue-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white">Бонус</div>
+                  <div className="flex items-center gap-3 relative z-10">
+                     <div className="bg-black/30 p-2 rounded-lg"><ShoppingBag className="text-blue-400" size={24} /></div>
+                     <div>
+                       <h3 className="font-bold text-white text-sm">Налоги +10%</h3>
+                       <p className="text-xs text-slate-400">Доход от всех зданий увеличивается навсегда.</p>
+                     </div>
                   </div>
-                  <button onClick={() => performUpgrade('tax', 1000 + (stats.upgrades.taxBoost*10000))} disabled={stats.money < 1000 + (stats.upgrades.taxBoost*10000)} className="mt-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:bg-slate-700 text-white text-xs py-2 rounded-lg font-bold">
-                    Купить за ${1000 + (stats.upgrades.taxBoost*10000)}
-                  </button>
-               </div>
-               
-               <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-white text-sm">Дешевые дороги (-20%)</h3>
-                    <p className="text-xs text-slate-400 mt-1">Снижает стоимость строительства дорог.</p>
-                  </div>
-                  <button onClick={() => performUpgrade('road', 500 + (stats.upgrades.roadDiscount*5000))} disabled={stats.money < 500 + (stats.upgrades.roadDiscount*5000) || stats.upgrades.roadDiscount >= 0.8} className="mt-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:bg-slate-700 text-white text-xs py-2 rounded-lg font-bold">
-                    {stats.upgrades.roadDiscount >= 0.8 ? 'Максимум' : `Купить за $${500 + (stats.upgrades.roadDiscount*5000)}`}
+                  <button onClick={() => { onAdReward('TAX_PERM_BOOST'); setUpgradesVisible(false); }} disabled={stats.upgrades.taxBoost >= 1} className="mt-4 bg-blue-600 hover:bg-blue-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-blue-900/50 disabled:opacity-50">
+                    {stats.upgrades.taxBoost >= 1 ? 'Максимум' : 'Получить +10%'}
                   </button>
                </div>
                
                <div className="bg-slate-800/80 p-4 rounded-xl border border-green-700/50 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-green-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white">Реклама</div>
+                  <div className="absolute top-0 right-0 bg-green-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white">Бонус</div>
                   <div className="flex items-center gap-3 relative z-10">
                      <div className="bg-black/30 p-2 rounded-lg"><Tv className="text-green-400" size={24} /></div>
                      <div>
-                       <h3 className="font-bold text-white text-sm">Грант от спонсоров</h3>
-                       <p className="text-xs text-slate-400">Посмотрите небольшой ролик, чтобы получить ${adRewardMoney.toLocaleString()} в казну моментально.</p>
+                       <h3 className="font-bold text-white text-sm">Денежный Бонус</h3>
+                       <p className="text-xs text-slate-400">Получите ${adRewardMoney.toLocaleString()} в казну моментально.</p>
                      </div>
                   </div>
                   <button onClick={() => { onAdReward('AD_MONEY'); setUpgradesVisible(false); }} className="mt-4 bg-green-600 hover:bg-green-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-green-900/50">
-                    Смотреть рекламу (+${adRewardMoney.toLocaleString()})
+                    Получить +${adRewardMoney.toLocaleString()}
                   </button>
                </div>
                
                <div className="bg-slate-800/80 p-4 rounded-xl border border-yellow-700/50 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 bg-yellow-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white">Реклама</div>
+                   <div className="absolute top-0 right-0 bg-yellow-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white">Бонус</div>
                    <div className="flex items-center gap-3 relative z-10">
                      <div className="bg-black/30 p-2 rounded-lg"><Zap className="text-yellow-400" size={24} /></div>
                      <div>
@@ -543,8 +537,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
               <div className="flex gap-3 items-center">
                  <div className="bg-white/20 p-2 rounded-full"><Zap className="text-yellow-100" /></div>
                  <div>
-                    <h3 className="text-white font-bold text-sm leading-tight">Спонсорская помощь!</h3>
-                    <p className="text-yellow-100 text-[10px] mt-1 leading-tight">Посмотрите видео, чтобы получить солидный буст.</p>
+                    <h3 className="text-white font-bold text-sm leading-tight">Доступен бонус!</h3>
+                    <p className="text-yellow-100 text-[10px] mt-1 leading-tight">Нажмите, чтобы получить солидный буст.</p>
                  </div>
               </div>
               <button onClick={() => { setAdPopupVisible(false); setUpgradesVisible(true); }} className="w-full mt-3 bg-white text-orange-600 hover:bg-yellow-50 font-bold py-1.5 rounded-lg text-xs shadow-md">

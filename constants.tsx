@@ -66,9 +66,9 @@ export const BUILDINGS: Record<BuildingType, BuildingConfig> = {
   [BuildingType.Road]: {
     type: BuildingType.Road,
     category: BuildingCategory.Infrastructure,
-    cost: 10,
+    cost: 50,
     name: 'Дорога',
-    description: 'Улица (1x1)',
+    description: 'Асфальт (1x1)',
     color: '#374151',
     popGen: 0,
     incomeGen: 0,

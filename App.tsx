@@ -636,14 +636,17 @@ function App() {
              if (rewardStr === 'AD_MONEY') {
                  const adRewardMoney = Math.round(1000 * Math.pow(2.2, statsRef.current.level - 1));
                  setStats(prev => ({...prev, money: prev.money + adRewardMoney}));
-                 addNewsItem({id: Date.now().toString(), text: `Спонсорская помощь! Получена награда: $${adRewardMoney.toLocaleString()}`, type: 'positive'});
+                 addNewsItem({id: Date.now().toString(), text: `Получен грант! В казну добавлено: $${adRewardMoney.toLocaleString()}`, type: 'positive'});
              } else if (rewardStr === 'TAX_BOOST') {
-                 addNewsItem({id: Date.now().toString(), text: "Спонсорская помощь! Активирован буст налогов!", type: 'positive'});
+                 addNewsItem({id: Date.now().toString(), text: "Активирована Золотая Лихорадка! Доход удвоен!", type: 'positive'});
                  setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 1}}));
                  setTimeout(() => {
                     setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 0}}));
-                    addNewsItem({id: Date.now().toString(), text: "Эффект удвоения налогов завершен.", type: 'neutral'});
+                    addNewsItem({id: Date.now().toString(), text: "Золотая Лихорадка закончилась.", type: 'neutral'});
                  }, 180000); // 3 minutes
+             } else if (rewardStr === 'TAX_PERM_BOOST') {
+                 setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: prev.upgrades.taxBoost + 0.1}}));
+                 addNewsItem({id: Date.now().toString(), text: "Налоги успешно повышены на 10% навсегда!", type: 'positive'});
              }
          },
          // onOpen

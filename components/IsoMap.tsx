@@ -1915,24 +1915,18 @@ const EnvironmentEffects = () => {
     )
 };
 
-const EnvironmentSystem = () => {
+const EnvironmentSystem = ({ isNightMode }: { isNightMode?: boolean }) => {
     const { scene } = useThree();
     const lightRef = useRef<THREE.DirectionalLight>(null);
     const ambientRef = useRef<THREE.AmbientLight>(null);
     const targetSkyColor = useMemo(() => new THREE.Color(), []);
     const targetLightColor = useMemo(() => new THREE.Color(), []);
+    const transitionPhase = useRef(isNightMode ? 0 : 1);
     
-    useFrame(({ clock }) => {
-        const cycleDuration = 15; // 15 seconds
-        
-        // Sine wave for smooth continuous transition
-        // value ranges from -1 to 1
-        const cyclePhase = Math.sin((clock.elapsedTime / cycleDuration) * Math.PI * 2);
-        
-        // Map sine wave to 0-1 range for lerp
-        // Shift it so that it spends more time in day/night and less in transition
-        // We can do this by clamping or using a smoothstep, but keeping it simple:
-        const t = (Math.sin((clock.elapsedTime / cycleDuration) * Math.PI * 2 - Math.PI/2) + 1) / 2;
+    useFrame((_, delta) => {
+        const targetPhase = isNightMode ? 0 : 1;
+        transitionPhase.current = THREE.MathUtils.lerp(transitionPhase.current, targetPhase, delta * 2.0);
+        const t = transitionPhase.current;
         
         // t goes smoothly from 0 (night) to 1 (day)
         targetSkyColor.lerpColors(new THREE.Color('#0f172a'), new THREE.Color('#87CEEB'), t);
@@ -2275,6 +2269,7 @@ interface IsoMapProps {
   hoveredTool: BuildingType | null;
   stats: CityStats;
   floatingTexts?: FloatingTextData[];
+  isNightMode?: boolean;
 }
 
 const FloatingLabels = ({ texts }: { texts: FloatingTextData[] }) => {
@@ -2296,7 +2291,7 @@ const FloatingLabels = ({ texts }: { texts: FloatingTextData[] }) => {
   );
 }
 
-const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, floatingTexts = [] }) => {
+const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, floatingTexts = [], isNightMode = false }) => {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number, rotation: number} | null>(null);
   const pointerDownPos = useRef<{x: number, y: number} | null>(null);
 
@@ -2386,9 +2381,8 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
         />
         <CameraController />
 
-        <EnvironmentSystem />
+        <EnvironmentSystem isNightMode={isNightMode} />
         
-
         <EnvironmentEffects />
 
         <group>

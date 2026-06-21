@@ -20,6 +20,8 @@ interface UIOverlayProps {
   onAdReward: (reward: string) => void;
   setStats: React.Dispatch<React.SetStateAction<CityStats>>;
   grid: Grid;
+  isNightMode?: boolean;
+  onToggleNightMode?: () => void;
 }
 
 const CATEGORIES = [
@@ -103,7 +105,9 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   setStats,
   dynamicCosts,
   moneyError,
-  grid }) => {
+  grid,
+  isNightMode = false,
+  onToggleNightMode }) => {
   const newsRef = useRef<HTMLDivElement>(null);
 
   const dailyIncome = React.useMemo(() => {
@@ -566,6 +570,16 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                  <div>
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Звуковые эффекты ({sfxVolume}%)</label>
                     <input type="range" min="0" max="100" value={sfxVolume} onChange={(e) => setSfxVolume(Number(e.target.value))} className="w-full accent-indigo-500" />
+                 </div>
+
+                 <div className="flex items-center justify-between mt-4">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ночной режим</label>
+                    <button 
+                        onClick={() => onToggleNightMode && onToggleNightMode()}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${isNightMode ? 'bg-indigo-500' : 'bg-slate-700'}`}
+                    >
+                        <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${isNightMode ? 'left-7' : 'left-1'}`} />
+                    </button>
                  </div>
                  
                  <div className="pt-4 border-t border-slate-800 space-y-3">

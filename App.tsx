@@ -145,6 +145,7 @@ function App() {
   const [floatingTexts, setFloatingTexts] = useState<FloatingTextData[]>([]);
   const [newsFeed, setNewsFeed] = useState<NewsItem[]>([]);
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
+  const [isNightMode, setIsNightMode] = useState(() => safeGetItem('polycity_night_mode') === 'true');
   
   const [moneyError, setMoneyError] = useState(false);
   const moneyErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -666,6 +667,7 @@ function App() {
         hoveredTool={selectedTool}
         stats={stats}
         floatingTexts={floatingTexts}
+        isNightMode={isNightMode}
       />
       
       {/* Start Screen Overlay */}
@@ -686,6 +688,12 @@ function App() {
             dynamicCosts={dynamicCosts}
             moneyError={moneyError}
             grid={grid}
+            isNightMode={isNightMode}
+            onToggleNightMode={() => {
+                const newMode = !isNightMode;
+                setIsNightMode(newMode);
+                safeSetItem('polycity_night_mode', newMode.toString());
+            }}
           />
           {showLevelUp && (
              <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto">

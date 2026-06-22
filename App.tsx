@@ -141,6 +141,11 @@ function App() {
       currentMissionIndex: 0
     };
   });
+
+  useEffect(() => {
+    // @ts-ignore
+    window.setCityStats = setStats;
+  }, [setStats]);
   const [selectedTool, setSelectedTool] = useState<BuildingType | null>(null);
   const [floatingTexts, setFloatingTexts] = useState<FloatingTextData[]>([]);
   const [newsFeed, setNewsFeed] = useState<NewsItem[]>([]);
@@ -332,7 +337,9 @@ function App() {
       let newHappiness = prev.happiness + (targetHappiness - prev.happiness) * 0.1;
 
       // Growth modifiers based on happiness
-      if (newHappiness < 30) dailyPopGrowth = -Math.max(1, Math.floor(prev.population * 0.02)); 
+      if (newHappiness < 10) dailyPopGrowth = -Math.max(5, Math.floor(prev.population * 0.05));
+      else if (newHappiness < 20) dailyPopGrowth = -Math.max(2, Math.floor(prev.population * 0.02));
+      else if (newHappiness < 40) dailyPopGrowth = -1;
       else if (newHappiness < 50) dailyPopGrowth = Math.floor(dailyPopGrowth * 0.5);
       else if (newHappiness > 80) dailyPopGrowth = Math.floor(dailyPopGrowth * 1.5);
 
@@ -344,6 +351,7 @@ function App() {
       let newPop = prev.population + dailyPopGrowth;
       if (newPop > maxPop) newPop = maxPop; 
       if (maxPop === 0 && prev.population > 0) newPop = Math.max(0, prev.population - 5); 
+      newPop = Math.max(0, newPop);
 
       // Move in bonus
       let actualGrowth = newPop - prev.population;

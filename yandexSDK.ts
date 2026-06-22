@@ -5,6 +5,7 @@ declare global {
     }
 }
 import { safeGetItem, safeSetItem } from './components/storage';
+import { setLang } from './i18n';
 
 class YandexSDKWrapper {
     private ysdk: any = null;
@@ -15,11 +16,22 @@ class YandexSDKWrapper {
         if (this.initialized) return;
 
         try {
+            // Check URL for lang parameter for local testing
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlLang = urlParams.get('lang');
+            if (urlLang) {
+                setLang(urlLang);
+            }
+
             if (typeof window !== 'undefined' && window.YaGames) {
                 this.ysdk = await window.YaGames.init();
                 window.ysdk = this.ysdk; // expose globally if needed
                 this.initialized = true;
                 console.log('Yandex Games SDK initialized');
+                
+                if (!urlLang && this.ysdk.environment && this.ysdk.environment.i18n) {
+                    setLang(this.ysdk.environment.i18n.lang);
+                }
                 if (this.ysdk.features && this.ysdk.features.LoadingAPI) {
                     this.ysdk.features.LoadingAPI.ready();
                     console.log('Yandex LoadingAPI ready called');

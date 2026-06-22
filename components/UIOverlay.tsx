@@ -11,6 +11,7 @@ import { sounds } from './soundEngine';
 import { TutorialManager, TUTORIAL_STEPS } from './TutorialManager';
 import { safeGetItem, safeSetItem, safeRemoveItem } from './storage';
 import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut, Gift } from 'lucide-react';
+import { t } from '../i18n';
 
 interface UIOverlayProps {
   stats: CityStats;
@@ -22,6 +23,8 @@ interface UIOverlayProps {
   grid: Grid;
   isNightMode?: boolean;
   onToggleNightMode?: () => void;
+  canUndo?: boolean;
+  onUndo?: () => void;
 }
 
 const CATEGORIES = [
@@ -107,7 +110,9 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   moneyError,
   grid,
   isNightMode = false,
-  onToggleNightMode }) => {
+  onToggleNightMode,
+  canUndo,
+  onUndo }) => {
   const newsRef = useRef<HTMLDivElement>(null);
 
   const dailyIncome = React.useMemo(() => {
@@ -663,15 +668,26 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       )}
 
       {/* Global Cancel Tool Button */}
-      {selectedTool !== null && (
-        <div className="absolute bottom-[160px] md:bottom-4 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-4 z-50 pointer-events-auto mb-safe transition-all animate-fade-in">
-          <button 
-            onClick={() => onSelectTool(null)} 
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 md:px-4 md:py-3 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.8)] border-2 border-red-400 backdrop-blur-md font-bold text-sm"
-          >
-            <X size={18} />
-            <span>Отменить выбор</span>
-          </button>
+      {(selectedTool !== null || canUndo) && (
+        <div className="absolute bottom-[160px] md:bottom-4 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-4 z-50 pointer-events-auto mb-safe transition-all animate-fade-in flex flex-col gap-2">
+          {canUndo && (
+            <button 
+              onClick={() => onUndo && onUndo()} 
+              className="flex items-center gap-2 bg-slate-600 hover:bg-slate-500 text-white px-4 py-2 md:px-4 md:py-3 rounded-2xl shadow-[0_0_20px_rgba(71,85,105,0.8)] border-2 border-slate-400 backdrop-blur-md font-bold text-sm"
+            >
+              <RotateCcw size={18} />
+              <span>{t('ui_undo')}</span>
+            </button>
+          )}
+          {selectedTool !== null && (
+            <button 
+              onClick={() => onSelectTool(null)} 
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 md:px-4 md:py-3 rounded-2xl shadow-[0_0_20px_rgba(37,99,235,0.8)] border-2 border-blue-400 backdrop-blur-md font-bold text-sm"
+            >
+              <X size={18} />
+              <span>{t('ui_cancel_tool')}</span>
+            </button>
+          )}
         </div>
       )}
 

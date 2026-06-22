@@ -1,4 +1,5 @@
 import { BuildingType } from '../types';
+import { t } from '../i18n';
 
 export type TutorialStep = {
     id: number;
@@ -11,32 +12,32 @@ export type TutorialStep = {
 export const TUTORIAL_STEPS: TutorialStep[] = [
     {
         id: 1,
-        title: "Добро пожаловать, Мэр!",
-        text: "Ваш новый город ждет! Давайте проведем небольшую экскурсию. Сверху вы видите вашу Казну и Население. Ваша главная цель — строить город и делать жителей счастливыми.",
+        get title() { return t('tut_welcome_title'); },
+        get text() { return t('tut_welcome_text'); },
         highlightArea: "stats"
     },
     {
         id: 2,
-        title: "Жилье",
-        text: "Здесь находятся жилые дома. Жителям нужно где-то жить! Стройте жилые зоны, чтобы увеличить население вашего города.",
+        get title() { return t('tut_build_res_title'); },
+        get text() { return t('tut_build_res_text'); },
         highlightArea: "toolbar_residential"
     },
     {
         id: 3,
-        title: "Коммерция",
-        text: "Здесь находятся коммерческие здания: магазины, торговые центры. В них жители тратят деньги, что приносит налоги в вашу казну!",
+        get title() { return t('tut_commercial_title'); },
+        get text() { return t('tut_commercial_text'); },
         highlightArea: "toolbar_commercial"
     },
     {
         id: 4,
-        title: "Промышленность",
-        text: "Здесь находятся фабрики и заводы. Они производят товары для магазинов и приносят большой доход, но загрязняют воздух рядом с домами!",
+        get title() { return t('b_industrial_name'); },
+        get text() { return t('tut_industrial_text', 'Постройте промышленную зону!'); },
         highlightArea: "toolbar_industrial"
     },
     {
         id: 5,
-        title: "Миссии и Бонусы",
-        text: "Слева вы видите Миссии, за выполнение которых даются награды. А если не хватает денег — жмите на светящийся Подарок! Удачи, Мэр!",
+        get title() { return t('ui_bonus'); },
+        get text() { return t('tut_bonus_text', 'Получайте бонусы за миссии!'); },
         highlightArea: "missions_and_gift"
     }
 ];

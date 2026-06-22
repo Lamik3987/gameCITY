@@ -1562,7 +1562,7 @@ const TrafficSystem = ({ grid }: { grid: Grid }) => {
 
   const isMobile = window.innerWidth <= 768;
   const maxCars = isMobile ? 4 : 10;
-  const carCount = Math.min(Math.floor(roadTilesInfo.roads.length * 0.15), maxCars);
+  const carCount = Math.max(0, Math.min(Math.floor(roadTilesInfo.roads.length * 0.15), maxCars));
   const carsRef = useRef<THREE.InstancedMesh>(null);
   const carsState = useRef<Float32Array>(new Float32Array(0)); 
   const dummy = useMemo(() => new THREE.Object3D(), []);
@@ -1724,7 +1724,7 @@ const clothesColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#
 const PopulationSystem = ({ population, grid }: { population: number, grid: Grid }) => {
     const isMobile = window.innerWidth <= 768;
     const maxAgents = isMobile ? 10 : 25;
-    const agentCount = Math.min(Math.floor(population / 25), maxAgents); 
+    const agentCount = Math.max(0, Math.min(Math.floor(population / 25), maxAgents)); 
     const meshRef = useRef<THREE.InstancedMesh>(null);
     
     // Find tiles where people can walk (Roads, Parks, empty ground)

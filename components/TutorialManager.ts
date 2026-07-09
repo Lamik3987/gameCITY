@@ -31,13 +31,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     {
         id: 4,
         get title() { return t('b_industrial_name'); },
-        get text() { return t('tut_industrial_text', 'Постройте промышленную зону!'); },
+        get text() { return t('tut_industrial_text'); },
         highlightArea: "toolbar_industrial"
     },
     {
         id: 5,
         get title() { return t('ui_bonus'); },
-        get text() { return t('tut_bonus_text', 'Получайте бонусы за миссии!'); },
+        get text() { return t('tut_bonus_text'); },
         highlightArea: "missions_and_gift"
     }
 ];

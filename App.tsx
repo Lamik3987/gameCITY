@@ -26,10 +26,11 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ color: 'white', background: 'red', padding: 20, zIndex: 99999, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-          <h1>Something went wrong.</h1>
-          <pre>{this.state.error?.toString()}</pre>
-          <pre>{this.state.error?.stack}</pre>
+        <div style={{ color: 'white', background: '#1e293b', padding: 40, zIndex: 99999, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif', textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>😔</div>
+          <h1 style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>Произошла ошибка</h1>
+          <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 24 }}>Что-то пошло не так. Попробуйте перезагрузить игру.</p>
+          <button onClick={() => window.location.reload()} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '12px 32px', borderRadius: 12, fontSize: 16, fontWeight: 'bold', cursor: 'pointer' }}>Перезагрузить</button>
         </div>
       );
     }
@@ -207,7 +208,7 @@ function App() {
   useEffect(() => {
     if (!gameStarted) return;
 
-    addNewsItem({ id: Date.now().toString(), text: "Добро пожаловать в SkyCity. Строительство разрешено.", type: 'positive' });
+    addNewsItem({ id: Date.now().toString(), text: "Добро пожаловать в SkyCity: Построй свой город! Строительство разрешено.", type: 'positive' });
     lastTimeRef.current = performance.now();
   }, [gameStarted, addNewsItem]);
 

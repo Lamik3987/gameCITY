@@ -480,8 +480,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
       {/* Upgrades Modal */}
       {upgradesVisible && (
-        <div className="absolute inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-lg w-full mx-4">
+        <div className="absolute inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto overflow-y-auto p-4">
+          <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-2">
                <h2 className="text-2xl font-black text-white flex items-center gap-2"><ShoppingBag className="text-purple-400"/> Исследования и Бусты</h2>
                <button onClick={() => setUpgradesVisible(false)} className="text-slate-400 hover:text-white"><X /></button>
@@ -489,7 +489,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-blue-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white">Бонус</div>
+                  <div className="absolute top-0 right-0 bg-blue-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white flex items-center gap-1"><Tv size={10} /> Реклама</div>
                   <div className="flex items-center gap-3 relative z-10">
                      <div className="bg-black/30 p-2 rounded-lg"><ShoppingBag className="text-blue-400" size={24} /></div>
                      <div>
@@ -497,13 +497,13 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                        <p className="text-xs text-slate-400">Доход от всех зданий увеличивается навсегда.</p>
                      </div>
                   </div>
-                  <button onClick={() => { onAdReward('TAX_PERM_BOOST'); setUpgradesVisible(false); }} disabled={stats.upgrades.taxBoost >= 1} className="mt-4 bg-blue-600 hover:bg-blue-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-blue-900/50 disabled:opacity-50">
-                    {stats.upgrades.taxBoost >= 1 ? 'Максимум' : 'Получить +10%'}
+                  <button onClick={() => { onAdReward('TAX_PERM_BOOST'); setUpgradesVisible(false); }} disabled={stats.upgrades.taxBoost >= 1} className="mt-4 bg-blue-600 hover:bg-blue-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-blue-900/50 disabled:opacity-50 flex items-center justify-center gap-1">
+                    <Tv size={12} /> {stats.upgrades.taxBoost >= 1 ? 'Максимум' : 'Смотреть рекламу — Получить +10%'}
                   </button>
                </div>
                
                <div className="bg-slate-800/80 p-4 rounded-xl border border-green-700/50 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-green-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white">Бонус</div>
+                  <div className="absolute top-0 right-0 bg-green-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white flex items-center gap-1"><Tv size={10} /> Реклама</div>
                   <div className="flex items-center gap-3 relative z-10">
                      <div className="bg-black/30 p-2 rounded-lg"><Tv className="text-green-400" size={24} /></div>
                      <div>
@@ -511,13 +511,13 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                        <p className="text-xs text-slate-400">Получите ${adRewardMoney.toLocaleString()} в казну моментально.</p>
                      </div>
                   </div>
-                  <button onClick={() => { onAdReward('AD_MONEY'); setUpgradesVisible(false); }} className="mt-4 bg-green-600 hover:bg-green-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-green-900/50">
-                    Получить +${adRewardMoney.toLocaleString()}
+                  <button onClick={() => { onAdReward('AD_MONEY'); setUpgradesVisible(false); }} className="mt-4 bg-green-600 hover:bg-green-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-green-900/50 flex items-center justify-center gap-1">
+                    <Tv size={12} /> Смотреть рекламу — Получить +${adRewardMoney.toLocaleString()}
                   </button>
                </div>
                
                <div className="bg-slate-800/80 p-4 rounded-xl border border-yellow-700/50 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 bg-yellow-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white">Бонус</div>
+                   <div className="absolute top-0 right-0 bg-yellow-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white flex items-center gap-1"><Tv size={10} /> Реклама</div>
                    <div className="flex items-center gap-3 relative z-10">
                      <div className="bg-black/30 p-2 rounded-lg"><Zap className="text-yellow-400" size={24} /></div>
                      <div>
@@ -525,8 +525,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                        <p className="text-xs text-slate-400">Удвойте весь доход города на 3 минуты.</p>
                      </div>
                   </div>
-                  <button onClick={() => { onAdReward('TAX_BOOST'); setUpgradesVisible(false); }} disabled={stats.upgrades.taxBoost > 0.5} className="mt-4 bg-yellow-600 hover:bg-yellow-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-yellow-900/50 disabled:opacity-50">
-                    Активировать
+                  <button onClick={() => { onAdReward('TAX_BOOST'); setUpgradesVisible(false); }} disabled={stats.upgrades.taxBoost > 0.5} className="mt-4 bg-yellow-600 hover:bg-yellow-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-yellow-900/50 disabled:opacity-50 flex items-center justify-center gap-1">
+                    <Tv size={12} /> Смотреть рекламу — Активировать
                   </button>
                </div>
             </div>
@@ -536,8 +536,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
       {/* Ad Popup Trigger Modal */}
       {adPopupVisible && (
-        <div id="ad-popup-container" className="absolute top-24 right-4 pointer-events-auto animate-bounce z-40">
-           <div className="bg-gradient-to-br from-yellow-500 to-orange-600 p-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.4)] border border-yellow-300 w-64">
+        <div id="ad-popup-container" className="absolute top-24 right-2 md:right-4 pointer-events-auto animate-bounce z-40 max-w-[calc(100vw-16px)]">
+           <div className="bg-gradient-to-br from-yellow-500 to-orange-600 p-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.4)] border border-yellow-300 w-64 max-w-full">
               <button onClick={() => setAdPopupVisible(false)} className="absolute top-1 right-1 text-yellow-100 hover:text-white"><X size={16}/></button>
               <div className="flex gap-3 items-center">
                  <div className="bg-white/20 p-2 rounded-full"><Zap className="text-yellow-100" /></div>
@@ -555,8 +555,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
       {/* Settings Modal */}
       {settingsVisible && (
-        <div className="absolute inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto">
-           <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-xs w-full mx-4">
+        <div className="absolute inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto overflow-y-auto p-4">
+           <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-xs w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-2">
                  <h2 className="text-xl font-black text-white flex items-center gap-2"><Settings className="text-gray-400" size={20}/> Настройки</h2>
                  <button onClick={() => setSettingsVisible(false)} className="text-slate-400 hover:text-white"><X /></button>

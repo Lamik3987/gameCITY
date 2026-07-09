@@ -46,17 +46,23 @@
   }
   
   @media (max-height: 450px) {
-    .short-screen-hide {
-      display: none !important;
-    }
-    .short-screen-compact {
-      padding: 0.5rem !important;
-      margin-top: 0.5rem !important;
-    }
-    .short-screen-text {
-      font-size: 0.75rem !important;
-      line-height: 1rem !important;
-      margin-bottom: 0.25rem !important;
-    }
+    .short-screen-hide { display: none !important; }
+    .short-screen-compact { padding: 0.5rem !important; margin-top: 0.5rem !important; }
+    .short-screen-text { font-size: 0.75rem !important; line-height: 1rem !important; margin-bottom: 0.25rem !important; }
+    
+    /* Toolbar compaction */
+    .short-screen-toolbar { padding-bottom: 2px !important; }
+    .short-screen-tab { padding: 0.15rem 0.4rem !important; font-size: 0.5rem !important; line-height: 0.6rem !important; }
+    .short-screen-tool { padding: 0.15rem !important; min-width: 45px !important; border-radius: 0.5rem !important; }
+    .short-screen-icon-container { width: 1.25rem !important; height: 1.25rem !important; margin-bottom: 0 !important; }
+    .short-screen-icon-container svg { width: 10px !important; height: 10px !important; }
+    .short-screen-tool-title { font-size: 0.4rem !important; line-height: 0.45rem !important; padding: 0 !important; }
+    .short-screen-tool-cost { font-size: 0.4rem !important; margin-top: 0 !important; }
+    .short-screen-tools-panel { padding: 0.15rem !important; border-radius: 0.75rem !important; gap: 0.15rem !important; }
+
+    /* HUD scaling */
+    .short-screen-stats-container { transform: scale(0.65) !important; transform-origin: top left !important; }
+    .short-screen-missions-container { transform: scale(0.6) !important; transform-origin: center left !important; }
+    .short-screen-settings-btn { transform: scale(0.65) !important; transform-origin: top right !important; }
   }
 }

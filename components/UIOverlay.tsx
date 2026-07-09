@@ -77,18 +77,18 @@ const ToolButton: React.FC<{
     <button 
       onClick={handleClick}
       disabled={(!isBulldoze && !canAfford) && !isLocked}
-      className={`relative flex flex-col items-center p-2 md:p-3 rounded-xl border-2 transition-all min-w-[70px] md:min-w-[85px] 
+      className={`relative flex flex-col items-center p-2 md:p-3 rounded-xl border-2 transition-all min-w-[70px] md:min-w-[85px] short-screen-tool 
         ${isSelected ? 'bg-indigo-600/30 border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.5)] -translate-y-1' : 'border-transparent bg-gray-800/80 hover:bg-gray-700/80 hover:-translate-y-0.5'}
         ${isLocked ? 'opacity-40 grayscale pointer-events-none' : ''} ${extraClass || ''}
       `}
       title={isLocked ? `Заблокировано до ур. ${config.minLevel}` : config.description}
     >
-      <div className="w-8 h-8 rounded-full mb-1 flex items-center justify-center shadow-inner" style={{ backgroundColor: isBulldoze ? '#ef4444' : bgColor }}>
+      <div className="w-8 h-8 rounded-full mb-1 flex items-center justify-center shadow-inner short-screen-icon-container" style={{ backgroundColor: isBulldoze ? '#ef4444' : bgColor }}>
         {getIcon()}
       </div>
-      <span className="text-[8px] md:text-[9px] font-bold text-white uppercase tracking-wider drop-shadow-md leading-tight text-center break-words w-full px-1 max-h-[2.4em] overflow-hidden">{config.name}</span>
+      <span className="text-[8px] md:text-[9px] font-bold text-white uppercase tracking-wider drop-shadow-md leading-tight text-center break-words w-full px-1 max-h-[2.4em] overflow-hidden short-screen-tool-title">{config.name}</span>
       {actualCost > 0 && !isLocked && (
-        <span className={`text-[9px] md:text-[10px] font-black leading-none mt-0.5 ${canAfford ? 'text-green-400' : 'text-red-400'}`}>${Math.floor(actualCost)}</span>
+        <span className={`text-[9px] md:text-[10px] font-black leading-none mt-0.5 short-screen-tool-cost ${canAfford ? 'text-green-400' : 'text-red-400'}`}>${Math.floor(actualCost)}</span>
       )}
       
       {isLocked && (
@@ -297,7 +297,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         <div className={`absolute inset-0 z-40 bg-black/60 transition-opacity duration-500 backdrop-blur-sm ${currentTutorial.actionRequired?.startsWith('place_') ? 'pointer-events-none' : 'pointer-events-auto'}`} />
       )}
 
-      <div className="absolute top-2 left-2 md:top-4 md:left-4 pointer-events-none flex flex-col gap-2 z-auto max-w-[calc(100vw-16px)] md:max-w-md">
+      <div className="absolute top-2 left-2 md:top-4 md:left-4 pointer-events-none flex flex-col gap-2 z-auto max-w-[calc(100vw-16px)] md:max-w-md short-screen-stats-container">
         <div className={`relative ${getHighlightClass('stats')} bg-gray-900/95 text-white p-1.5 md:p-3 rounded-xl border border-gray-700 shadow-xl backdrop-blur-md flex gap-2 md:gap-6 items-center w-full md:w-auto overflow-hidden`}>
           <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''} relative px-1`}>
             <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">Казна</span>
@@ -691,7 +691,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         </div>
       )}
 
-      <div className={`${getHighlightClass('toolbar')} absolute bottom-0 left-0 right-0 flex flex-col items-center pb-2 md:pb-4 px-2 pb-safe`}>
+      <div className={`${getHighlightClass('toolbar')} absolute bottom-0 left-0 right-0 flex flex-col items-center pb-2 md:pb-4 px-2 pb-safe short-screen-toolbar`}>
         
         {/* Category Tabs */}
         {toolbarExpanded && (
@@ -702,7 +702,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                 onClick={() => {
                    setActiveCategory(cat.id);
                 }}
-                className={`relative text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap ${getHighlightClass(`toolbar_${cat.id.toLowerCase()}`)} ${activeCategory === cat.id ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                className={`relative text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap short-screen-tab ${getHighlightClass(`toolbar_${cat.id.toLowerCase()}`)} ${activeCategory === cat.id ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
               >
                 {cat.name}
               </button>
@@ -711,7 +711,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         )}
 
         {/* Selected Category Buildings */}
-        <div className="flex bg-gray-900/90 p-1 md:p-2 rounded-2xl border border-gray-600/50 backdrop-blur-xl shadow-2xl relative">
+        <div className="flex bg-gray-900/90 p-1 md:p-2 rounded-2xl border border-gray-600/50 backdrop-blur-xl shadow-2xl relative short-screen-tools-panel">
           
           {/* Collapse/Expand Toggle */}
           <button 
@@ -751,7 +751,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       </div>
       
             {/* Settings btn in top-right */}
-      <div className="absolute top-2 right-2 md:top-4 md:right-4 pointer-events-auto z-[60]">
+      <div className="absolute top-2 right-2 md:top-4 md:right-4 pointer-events-auto z-[60] short-screen-settings-btn">
         <button 
           onClick={(e) => { e.stopPropagation(); setSettingsVisible(true); }} 
           onPointerDown={(e) => { e.stopPropagation(); setSettingsVisible(true); }}

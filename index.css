@@ -44,4 +44,19 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgba(255, 255, 255, 0.4);
   }
+  
+  @media (max-height: 450px) {
+    .short-screen-hide {
+      display: none !important;
+    }
+    .short-screen-compact {
+      padding: 0.5rem !important;
+      margin-top: 0.5rem !important;
+    }
+    .short-screen-text {
+      font-size: 0.75rem !important;
+      line-height: 1rem !important;
+      margin-bottom: 0.25rem !important;
+    }
+  }
 }

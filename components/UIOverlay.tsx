@@ -212,7 +212,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const getTutorialModalPosition = () => {
      if (!currentTutorial) return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
      if (currentTutorial.highlightArea === "stats") return "top-20 left-1/2 -translate-x-1/2 md:left-4 md:translate-x-0";
-     if (currentTutorial.highlightArea.startsWith("toolbar")) return "top-4 left-1/2 -translate-x-1/2 md:top-auto md:bottom-40";
+     if (currentTutorial.highlightArea.startsWith("toolbar")) return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:top-auto md:bottom-40";
      if (currentTutorial.highlightArea === "missions_and_gift") return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:left-4 md:translate-x-0";
      return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
   };
@@ -439,21 +439,21 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       {/* Dynamic Tutorial Modal - Clash Royale style */}
       {currentTutorial && selectedTool === null && (
          <div className={`absolute ${getTutorialModalPosition()} z-[120] w-full max-w-[320px] px-2 pointer-events-none transition-all duration-500 flex justify-center`}>
-           <div className="bg-slate-900 border-[3px] border-yellow-500 p-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(234,179,8,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-y-auto max-h-[85vh] w-full custom-scrollbar">
+           <div className="bg-slate-900 border-[3px] border-yellow-500 p-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(234,179,8,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-y-auto max-h-[85vh] w-full custom-scrollbar short-screen-compact">
              
              {/* Skip button */}
              <button onPointerDown={(e) => { e.stopPropagation(); completeTutorial(); }} className="absolute top-2 right-2 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[10px] bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
                <X size={12} /> ПРОПУСТИТЬ
              </button>
 
-             <div className="mb-2 mt-6 flex justify-center">
+             <div className="mb-2 mt-6 flex justify-center short-screen-hide">
                 <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-2 rounded-full shadow-lg shadow-yellow-500/30 border-2 border-white">
                   <Tv className="text-white" size={32} />
                 </div>
              </div>
              
-             <h2 className="text-lg font-black text-white mb-2 tracking-wide uppercase">{currentTutorial.title}</h2>
-             <p className="text-xs text-slate-300 mb-4 leading-relaxed font-medium">{currentTutorial.text}</p>
+             <h2 className="text-lg font-black text-white mb-2 tracking-wide uppercase short-screen-text">{currentTutorial.title}</h2>
+             <p className="text-xs text-slate-300 mb-4 leading-relaxed font-medium short-screen-text">{currentTutorial.text}</p>
              
              {/* Navigation Buttons or Action indicator */}
              <div className="flex gap-2 w-full justify-center">

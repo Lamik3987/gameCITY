@@ -211,9 +211,9 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
   const getTutorialModalPosition = () => {
      if (!currentTutorial) return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
-     if (currentTutorial.highlightArea === "stats") return "top-28 left-4";
-     if (currentTutorial.highlightArea.startsWith("toolbar")) return "bottom-72 left-1/2 -translate-x-1/2";
-     if (currentTutorial.highlightArea === "missions_and_gift") return "top-1/2 left-4 -translate-y-1/2";
+     if (currentTutorial.highlightArea === "stats") return "top-20 left-1/2 -translate-x-1/2 md:left-4 md:translate-x-0";
+     if (currentTutorial.highlightArea.startsWith("toolbar")) return "top-4 left-1/2 -translate-x-1/2 md:top-auto md:bottom-40";
+     if (currentTutorial.highlightArea === "missions_and_gift") return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 md:left-4 md:translate-x-0";
      return "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2";
   };
 
@@ -438,8 +438,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
       {/* Dynamic Tutorial Modal - Clash Royale style */}
       {currentTutorial && selectedTool === null && (
-         <div className={`absolute ${getTutorialModalPosition()} z-[120] w-full max-w-[320px] px-2 pointer-events-none transition-all duration-500`}>
-           <div className="bg-slate-900 border-[3px] border-yellow-500 p-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(234,179,8,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-hidden">
+         <div className={`absolute ${getTutorialModalPosition()} z-[120] w-full max-w-[320px] px-2 pointer-events-none transition-all duration-500 flex justify-center`}>
+           <div className="bg-slate-900 border-[3px] border-yellow-500 p-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(234,179,8,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-y-auto max-h-[85vh] w-full custom-scrollbar">
              
              {/* Skip button */}
              <button onPointerDown={(e) => { e.stopPropagation(); completeTutorial(); }} className="absolute top-2 right-2 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[10px] bg-slate-800 px-2 py-1 rounded-full border border-slate-700">

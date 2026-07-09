@@ -438,7 +438,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
       {/* Dynamic Tutorial Modal - Clash Royale style */}
       {currentTutorial && selectedTool === null && (
-         <div className={`absolute ${getTutorialModalPosition()} z-[120] w-full max-w-[320px] px-2 pointer-events-none transition-all duration-500 flex justify-center`}>
+         <div className={`absolute ${getTutorialModalPosition()} z-[120] w-full max-w-[320px] px-2 pointer-events-none transition-all duration-500 flex justify-center short-screen-modal-pos`}>
            <div className="bg-slate-900 border-[3px] border-yellow-500 p-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(234,179,8,0.5)] text-center pointer-events-auto transform animate-bounce-slight relative overflow-y-auto max-h-[85vh] w-full custom-scrollbar short-screen-compact">
              
              {/* Skip button */}

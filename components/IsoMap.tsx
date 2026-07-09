@@ -880,6 +880,8 @@ case BuildingType.ChemicalPlant:
                 </mesh>
                 <WindowBlock position={[0.22, 0.35, 0.395]} scale={[0.16, 0.22, 0.02]} />
                 <WindowBlock position={[-0.22, 0.35, 0.395]} scale={[0.16, 0.22, 0.02]} />
+                <WindowBlock position={[0.22, 0.35, -0.395]} scale={[0.16, 0.22, 0.02]} />
+                <WindowBlock position={[-0.22, 0.35, -0.395]} scale={[0.16, 0.22, 0.02]} />
                 <WindowBlock position={[0.395, 0.35, 0]} scale={[0.02, 0.22, 0.28]} />
                 <WindowBlock position={[-0.395, 0.35, 0]} scale={[0.02, 0.22, 0.28]} />
               </>
@@ -902,6 +904,7 @@ case BuildingType.ChemicalPlant:
                   <meshStandardMaterial color="#d1d5db" transparent opacity={0.6} />
                 </mesh>
                 <WindowBlock position={[0, 0.82, 0.405]} scale={[0.3, 0.35, 0.02]} />
+                <WindowBlock position={[0, 0.82, -0.805]} scale={[0.3, 0.35, 0.02]} />
                 <mesh {...commonProps} geometry={boxGeo} position={[0.2, 1.15, -0.4]} scale={[0.25, 0.15, 0.25]}>
                   <meshStandardMaterial color="#6b7280" />
                 </mesh>
@@ -909,9 +912,12 @@ case BuildingType.ChemicalPlant:
                 <mesh {...commonProps} geometry={boxGeo} position={[-0.22, 0.24, 0.885]} scale={[0.22, 0.45, 0.02]}>
                   <meshStandardMaterial color="#451a03" />
                 </mesh>
+                <WindowBlock position={[0.22, 0.3, -0.885]} scale={[0.22, 0.3, 0.02]} />
+                <WindowBlock position={[-0.22, 0.3, -0.885]} scale={[0.22, 0.3, 0.02]} />
                 <WindowBlock position={[0.425, 0.3, -0.2]} scale={[0.02, 0.25, 0.6]} />
                 <WindowBlock position={[-0.425, 0.3, -0.2]} scale={[0.02, 0.25, 0.6]} />
                 <WindowBlock position={[0.385, 0.82, -0.2]} scale={[0.02, 0.22, 0.5]} />
+                <WindowBlock position={[-0.385, 0.82, -0.2]} scale={[0.02, 0.22, 0.5]} />
               </>
             );
 
@@ -986,6 +992,16 @@ case BuildingType.ChemicalPlant:
                 <WindowBlock position={[0.4, 1.35, 0.83]} scale={[0.25, 0.22, 0.02]} />
                 <WindowBlock position={[0.4, 1.82, 0.83]} scale={[0.25, 0.22, 0.02]} />
 
+                {/* rear windows column left */}
+                <WindowBlock position={[-0.4, 0.85, -0.83]} scale={[0.25, 0.22, 0.02]} />
+                <WindowBlock position={[-0.4, 1.35, -0.83]} scale={[0.25, 0.22, 0.02]} />
+                <WindowBlock position={[-0.4, 1.82, -0.83]} scale={[0.25, 0.22, 0.02]} />
+
+                {/* rear windows column right */}
+                <WindowBlock position={[0.4, 0.85, -0.83]} scale={[0.25, 0.22, 0.02]} />
+                <WindowBlock position={[0.4, 1.35, -0.83]} scale={[0.25, 0.22, 0.02]} />
+                <WindowBlock position={[0.4, 1.82, -0.83]} scale={[0.25, 0.22, 0.02]} />
+
                 {/* left side windows */}
                 <WindowBlock position={[-0.83, 0.85, -0.3]} scale={[0.02, 0.22, 0.35]} />
                 <WindowBlock position={[-0.83, 1.35, -0.3]} scale={[0.02, 0.22, 0.35]} />
@@ -1027,6 +1043,9 @@ case BuildingType.ChemicalPlant:
                 <WindowBlock position={[0, 0.4, 0.96]} scale={[1.1, 0.5, 0.02]} />
                 <WindowBlock position={[0.79, 0.4, 0.5]} scale={[0.02, 0.5, 0.6]} />
                 <WindowBlock position={[-0.79, 0.4, 0.5]} scale={[0.02, 0.5, 0.6]} />
+
+                {/* Rear clerestory windows for Supermarket */}
+                <WindowBlock position={[0, 0.55, -1.36]} scale={[1.2, 0.15, 0.02]} />
 
                 {/* Entrance glass automatic slide doors */}
                 <mesh {...commonProps} geometry={boxGeo} position={[0, 0.22, 0.97]} scale={[0.4, 0.42, 0.02]}>
@@ -1135,6 +1154,10 @@ case BuildingType.ChemicalPlant:
                 <WindowBlock position={[0.81, 0.4, -0.3]} scale={[0.02, 0.3, 0.6]} />
                 <WindowBlock position={[-0.81, 0.4, -0.3]} scale={[0.02, 0.3, 0.6]} />
 
+                {/* Rear Market Hall windows */}
+                <WindowBlock position={[-0.4, 0.4, -0.81]} scale={[0.4, 0.3, 0.02]} />
+                <WindowBlock position={[0.4, 0.4, -0.81]} scale={[0.4, 0.3, 0.02]} />
+
                 {/* Main Glass Sliding Doors for Market Hall */}
                 <mesh {...commonProps} geometry={boxGeo} position={[0, 0.25, 0.21]} scale={[0.3, 0.5, 0.02]}>
                   <meshStandardMaterial color="#1e293b" metalness={0.9} roughness={0.1} />
@@ -1235,6 +1258,8 @@ case BuildingType.FactoryLarge:
                 <mesh {...commonProps} geometry={boxGeo} position={[-0.15, 0.45, -0.45]} scale={[1.1, 0.9, 1.6]}>
                   <meshStandardMaterial {...getMatProps(colorStr)} />
                 </mesh>
+                {/* Rear high industrial windows */}
+                <WindowBlock position={[-0.15, 0.65, -1.26]} scale={[0.8, 0.2, 0.02]} />
                 {/* Sawtooth Roof 1 */}
                 <mesh {...commonProps} geometry={boxGeo} position={[-0.42, 0.95, -0.45]} scale={[0.52, 0.22, 1.5]} rotation={[0, 0, Math.PI / 5]}>
                   <meshStandardMaterial {...getMatProps(roofColorStr)} />
@@ -1308,6 +1333,9 @@ case BuildingType.FactoryLarge:
                 <mesh {...commonProps} geometry={boxGeo} position={[-0.2, 0.35, -0.1]} scale={[1.1, 0.7, 1.4]}>
                   <meshStandardMaterial {...getMatProps(colorStr)} />
                 </mesh>
+                
+                {/* Rear high industrial windows */}
+                <WindowBlock position={[-0.2, 0.5, -0.81]} scale={[0.7, 0.15, 0.02]} />
 
                 {/* Sawtooth / Pitched Roof 1 */}
                 <mesh {...commonProps} geometry={boxGeo} position={[-0.45, 0.75, -0.1]} scale={[0.5, 0.16, 1.3]} rotation={[0, 0, Math.PI / 6]}>

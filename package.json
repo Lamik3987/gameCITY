@@ -1,5 +1,5 @@
 {
-  "name": "sky-metropolis",
+  "name": "skycity-game",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,7 +9,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^1.25.0",
     "@react-three/drei": "^10.0.0",
     "@react-three/fiber": "^9.0.0",
     "lucide-react": "^1.20.0",

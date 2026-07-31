@@ -1888,7 +1888,7 @@ const Cloud = ({ position, scale, speed }: { position: [number, number, number],
         <group ref={group} position={position} scale={scale}>
             {bubbles.map((b, i) => (
                 <mesh key={i} geometry={sphereGeo} position={b.pos} scale={b.scale} castShadow={false}>
-                    <meshStandardMaterial color="white" flatShading opacity={0.9} transparent />
+                    <meshStandardMaterial color="#f8fafc" flatShading opacity={0.42} transparent depthWrite={false} />
                 </mesh>
             ))}
         </group>
@@ -1922,9 +1922,9 @@ const EnvironmentEffects = () => {
              {/* Clouds & Birds - disabled on mobile for performance */}
              {!isMobile && (
                <>
-                 <Cloud position={[-12, 8, 4]} scale={1.5} speed={0.3} />
-                 <Cloud position={[5, 9, -8]} scale={1.2} speed={0.5} />
-                 <Cloud position={[15, 7, 10]} scale={1.8} speed={0.2} />
+                 <Cloud position={[-12, 14, 4]} scale={0.7} speed={0.3} />
+                 <Cloud position={[5, 16, -8]} scale={0.55} speed={0.5} />
+                 <Cloud position={[15, 13, 10]} scale={0.8} speed={0.2} />
                  
                  <group position={[0, 0, 0]} scale={0.8}>
                      <Bird position={[0, 0, 10]} speed={0.6} offset={0} />
@@ -2015,11 +2015,44 @@ const CameraController = () => {
                 targetZoom.current = Math.max(25, Math.min(targetZoom.current + e.detail.dir * 8, maxZ));
             }
         };
+        const handleTrackpadZoom = (e: any) => {
+            if (!(camera instanceof THREE.OrthographicCamera)) return;
+            const maxZ = window.innerWidth <= 768 ? 55 : 80;
+            const currentTarget = targetZoom.current ?? camera.zoom;
+            targetZoom.current = THREE.MathUtils.clamp(
+                currentTarget - e.detail.deltaY * 0.09,
+                25,
+                maxZ
+            );
+        };
+        const handleTrackpadPan = (e: any) => {
+            if (!controls || !(camera instanceof THREE.OrthographicCamera)) return;
+            const ctrl = controls as any;
+            const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+            const screenUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+            right.y = 0;
+            screenUp.y = 0;
+            if (right.lengthSq() === 0 || screenUp.lengthSq() === 0) return;
+            right.normalize();
+            screenUp.normalize();
+
+            const worldPerPixel = 1 / camera.zoom;
+            const movement = new THREE.Vector3()
+                .addScaledVector(right, e.detail.deltaX * worldPerPixel)
+                .addScaledVector(screenUp, -e.detail.deltaY * worldPerPixel);
+            camera.position.add(movement);
+            ctrl.target.add(movement);
+            ctrl.update();
+        };
         window.addEventListener('rotateCamera', handleRotate);
         window.addEventListener('zoomCamera', handleZoom);
+        window.addEventListener('trackpadZoom', handleTrackpadZoom);
+        window.addEventListener('trackpadPan', handleTrackpadPan);
         return () => {
             window.removeEventListener('rotateCamera', handleRotate);
             window.removeEventListener('zoomCamera', handleZoom);
+            window.removeEventListener('trackpadZoom', handleTrackpadZoom);
+            window.removeEventListener('trackpadPan', handleTrackpadPan);
         };
     }, [controls, camera]);
 
@@ -2185,7 +2218,9 @@ const GroundInstances = React.memo(({ grid, hoveredTool }: { grid: Grid, hovered
         let scaleFactor = 1; // Removed 0.95 scaling that caused jagged gaps
 
         if (!tile.unlocked) {
-           c = '#64748b'; topY = -0.4;
+           const noise = getHash(x, y);
+           c = noise > 0.66 ? '#173f4c' : noise > 0.33 ? '#123746' : '#0f2b38';
+           topY = -0.4 - noise * 0.025;
         } else if (isIndustrial) {
            // Industrial placement heatmap overlay:
            // Calculate minimum distance to any house
@@ -2246,6 +2281,151 @@ const GroundInstances = React.memo(({ grid, hoveredTool }: { grid: Grid, hovered
     <instancedMesh ref={meshRef} args={[boxGeo, undefined, GRID_SIZE * GRID_SIZE]} receiveShadow={false} castShadow={false} frustumCulled={false}>
       <meshStandardMaterial flatShading roughness={1} />
     </instancedMesh>
+  );
+});
+
+const LockedGlassOverlay = React.memo(({ grid }: { grid: Grid }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const color = useMemo(() => new THREE.Color(), []);
+  const lockedTiles = useMemo(() => {
+    const tiles: Array<{ x: number; y: number; hash: number }> = [];
+    for (let y = 0; y < GRID_SIZE; y++) {
+      for (let x = 0; x < GRID_SIZE; x++) {
+        if (!grid[y][x].unlocked) tiles.push({ x, y, hash: getHash(x, y) });
+      }
+    }
+    return tiles;
+  }, [grid]);
+
+  useEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    lockedTiles.forEach((tile, i) => {
+      const [wx, , wz] = gridToWorld(tile.x, tile.y);
+      dummy.position.set(wx, -0.365, wz);
+      dummy.scale.set(0.92, 0.035, 0.92);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+      mesh.setColorAt(i, color.set(tile.hash > 0.66 ? '#a5f3fc' : tile.hash > 0.33 ? '#67e8f9' : '#38bdf8'));
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [lockedTiles, dummy, color]);
+
+  if (lockedTiles.length === 0) return null;
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[boxGeo, undefined, lockedTiles.length]}
+      raycast={() => null}
+      frustumCulled={false}
+    >
+      <meshStandardMaterial
+        transparent
+        opacity={0.46}
+        roughness={0.14}
+        metalness={0.35}
+        emissive="#0ea5e9"
+        emissiveIntensity={0.16}
+        depthWrite={false}
+      />
+    </instancedMesh>
+  );
+});
+
+const TerrainDetails = React.memo(({ grid }: { grid: Grid }) => {
+  const treeTrunksRef = useRef<THREE.InstancedMesh>(null);
+  const treeCrownsRef = useRef<THREE.InstancedMesh>(null);
+  const shrubsRef = useRef<THREE.InstancedMesh>(null);
+  const rocksRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  const details = useMemo(() => {
+    const trees: Array<[number, number, number]> = [];
+    const shrubs: Array<[number, number, number]> = [];
+    const rocks: Array<[number, number, number]> = [];
+
+    for (let y = 0; y < GRID_SIZE; y++) {
+      for (let x = 0; x < GRID_SIZE; x++) {
+        const tile = grid[y][x];
+        if (tile.buildingType !== BuildingType.None) continue;
+        const hash = getHash(x, y);
+        const [wx, , wz] = gridToWorld(x, y);
+        const jitterX = (getHash(x + 17, y + 31) - 0.5) * 0.45;
+        const jitterZ = (getHash(x + 47, y + 11) - 0.5) * 0.45;
+        const item: [number, number, number] = [wx + jitterX, 0, wz + jitterZ];
+
+        if (!tile.unlocked && hash > 0.965) trees.push(item);
+        else if (!tile.unlocked && hash > 0.935) rocks.push(item);
+        else if (tile.unlocked && hash > 0.82) shrubs.push(item);
+      }
+    }
+    return { trees, shrubs, rocks };
+  }, [grid]);
+
+  useEffect(() => {
+    details.trees.forEach(([x, , z], i) => {
+      const scale = 0.8 + getHash(i, 7) * 0.45;
+      dummy.position.set(x, -0.21, z);
+      dummy.scale.set(0.08 * scale, 0.36 * scale, 0.08 * scale);
+      dummy.rotation.set(0, getHash(i, 12) * Math.PI, 0);
+      dummy.updateMatrix();
+      treeTrunksRef.current?.setMatrixAt(i, dummy.matrix);
+
+      dummy.position.set(x, 0.08 * scale, z);
+      dummy.scale.set(0.26 * scale, 0.38 * scale, 0.26 * scale);
+      dummy.updateMatrix();
+      treeCrownsRef.current?.setMatrixAt(i, dummy.matrix);
+    });
+
+    details.shrubs.forEach(([x, , z], i) => {
+      const scale = 0.75 + getHash(i, 23) * 0.35;
+      dummy.position.set(x, -0.2, z);
+      dummy.scale.set(0.14 * scale, 0.16 * scale, 0.14 * scale);
+      dummy.rotation.set(0, getHash(i, 29) * Math.PI, 0);
+      dummy.updateMatrix();
+      shrubsRef.current?.setMatrixAt(i, dummy.matrix);
+    });
+
+    details.rocks.forEach(([x, , z], i) => {
+      const scale = 0.65 + getHash(i, 41) * 0.5;
+      dummy.position.set(x, -0.34, z);
+      dummy.scale.set(0.16 * scale, 0.11 * scale, 0.14 * scale);
+      dummy.rotation.set(getHash(i, 43), getHash(i, 47) * Math.PI, 0);
+      dummy.updateMatrix();
+      rocksRef.current?.setMatrixAt(i, dummy.matrix);
+    });
+
+    for (const ref of [treeTrunksRef, treeCrownsRef, shrubsRef, rocksRef]) {
+      if (ref.current) ref.current.instanceMatrix.needsUpdate = true;
+    }
+  }, [details, dummy]);
+
+  return (
+    <group>
+      {details.trees.length > 0 && (
+        <>
+          <instancedMesh ref={treeTrunksRef} args={[boxGeo, undefined, details.trees.length]} raycast={() => null}>
+            <meshStandardMaterial color="#5b4636" roughness={1} />
+          </instancedMesh>
+          <instancedMesh ref={treeCrownsRef} args={[sphereGeo, undefined, details.trees.length]} raycast={() => null}>
+            <meshStandardMaterial color="#166534" roughness={1} flatShading />
+          </instancedMesh>
+        </>
+      )}
+      {details.shrubs.length > 0 && (
+        <instancedMesh ref={shrubsRef} args={[sphereGeo, undefined, details.shrubs.length]} raycast={() => null}>
+          <meshStandardMaterial color="#65a30d" roughness={1} flatShading />
+        </instancedMesh>
+      )}
+      {details.rocks.length > 0 && (
+        <instancedMesh ref={rocksRef} args={[boxGeo, undefined, details.rocks.length]} raycast={() => null}>
+          <meshStandardMaterial color="#94a3b8" roughness={1} flatShading />
+        </instancedMesh>
+      )}
+    </group>
   );
 });
 
@@ -2322,6 +2502,25 @@ const FloatingLabels = ({ texts }: { texts: FloatingTextData[] }) => {
 const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, floatingTexts = [], isNightMode = false }) => {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number, rotation: number} | null>(null);
   const pointerDownPos = useRef<{x: number, y: number} | null>(null);
+  const activePointers = useRef(new Set<number>());
+
+  const handleTrackpadWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const looksLikeTrackpad = e.ctrlKey || Math.abs(e.deltaX) > 0 || Math.abs(e.deltaY) < 60;
+    if (!looksLikeTrackpad) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.ctrlKey || e.metaKey) {
+      window.dispatchEvent(new CustomEvent('trackpadZoom', {
+        detail: { deltaY: e.deltaY }
+      }));
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent('trackpadPan', {
+      detail: { deltaX: e.deltaX, deltaY: e.deltaY }
+    }));
+  }, []);
 
   const handleHover = useCallback((x: number, y: number, rotation: number) => {
     setHoveredTile({ x, y, rotation });
@@ -2380,7 +2579,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
   const previewPos = showPreview ? gridToWorld(cursorX + (bWidth - 1) / 2, cursorY + (bHeight - 1) / 2) : [0,0,0];
 
   return (
-    <div className="absolute inset-0 bg-[#10b981] touch-none">
+    <div className="absolute inset-0 bg-[#10b981] touch-none" onWheelCapture={handleTrackpadWheel}>
       <Canvas shadows={false} dpr={[1, 1]} gl={{ antialias: false, powerPreference: "high-performance" }}>
         <OrthographicCamera makeDefault zoom={25} position={[40, 40, 40]} near={-1000} far={1000} />
         
@@ -2444,13 +2643,21 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
                }
             }}
             onPointerOut={() => handleLeave()}
-            onPointerDown={(e) => {
-               pointerDownPos.current = { x: e.clientX, y: e.clientY };
-            }}
-            onPointerUp={(e) => {
-               if (!pointerDownPos.current) return;
-               const dist = Math.hypot(e.clientX - pointerDownPos.current.x, e.clientY - pointerDownPos.current.y);
-               pointerDownPos.current = null;
+             onPointerDown={(e) => {
+                activePointers.current.add(e.pointerId);
+                pointerDownPos.current = activePointers.current.size === 1
+                  ? { x: e.clientX, y: e.clientY }
+                  : null;
+             }}
+             onPointerUp={(e) => {
+                const wasSinglePointer = activePointers.current.size === 1;
+                activePointers.current.delete(e.pointerId);
+                if (!wasSinglePointer || !pointerDownPos.current) {
+                  pointerDownPos.current = null;
+                  return;
+                }
+                const dist = Math.hypot(e.clientX - pointerDownPos.current.x, e.clientY - pointerDownPos.current.y);
+                pointerDownPos.current = null;
                
                if (dist > 10) return; // It was a drag, ignore click
                
@@ -2462,14 +2669,20 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
                if (ax >= 0 && ax < GRID_SIZE && ay >= 0 && ay < GRID_SIZE) {
                    const rotation = getSnappedCameraAngle(e.camera);
                    onTileClick(ax, ay, rotation);
-               }
-            }}
+                }
+             }}
+             onPointerCancel={(e) => {
+                activePointers.current.delete(e.pointerId);
+                pointerDownPos.current = null;
+             }}
           >
              <planeGeometry args={[GRID_SIZE * 2, GRID_SIZE * 2]} />
              <meshBasicMaterial />
           </mesh>
 
-          <GroundInstances grid={grid} hoveredTool={hoveredTool} />
+           <GroundInstances grid={grid} hoveredTool={hoveredTool} />
+           <LockedGlassOverlay grid={grid} />
+           <TerrainDetails grid={grid} />
           {hoveredTool !== null && hoveredTool !== BuildingType.BuyLand && hoveredTool !== BuildingType.None && (
              <DreiGrid 
                position={[0, -0.279, 0]} 

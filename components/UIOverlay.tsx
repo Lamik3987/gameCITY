@@ -23,6 +23,7 @@ interface UIOverlayProps {
   grid: Grid;
   isNightMode?: boolean;
   onToggleNightMode?: () => void;
+  onResetProgress?: () => Promise<void> | void;
   canUndo?: boolean;
   onUndo?: () => void;
 }
@@ -77,7 +78,7 @@ const ToolButton: React.FC<{
     <button 
       onClick={handleClick}
       disabled={(!isBulldoze && !canAfford) && !isLocked}
-      className={`relative flex flex-col items-center p-2 md:p-3 rounded-xl border-2 transition-all min-w-[70px] md:min-w-[85px] short-screen-tool 
+      className={`relative flex flex-col items-center p-1.5 md:p-3 rounded-xl border-2 transition-all min-w-[62px] md:min-w-[85px] min-h-[62px] short-screen-tool touch-manipulation
         ${isSelected ? 'bg-indigo-600/30 border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.5)] -translate-y-1' : 'border-transparent bg-gray-800/80 hover:bg-gray-700/80 hover:-translate-y-0.5'}
         ${isLocked ? 'opacity-40 grayscale pointer-events-none' : ''} ${extraClass || ''}
       `}
@@ -86,7 +87,7 @@ const ToolButton: React.FC<{
       <div className="w-8 h-8 rounded-full mb-1 flex items-center justify-center shadow-inner short-screen-icon-container" style={{ backgroundColor: isBulldoze ? '#ef4444' : bgColor }}>
         {getIcon()}
       </div>
-      <span className="text-[8px] md:text-[9px] font-bold text-white uppercase tracking-wider drop-shadow-md leading-tight text-center break-words w-full px-1 max-h-[2.4em] overflow-hidden short-screen-tool-title">{config.name}</span>
+      <span className="text-[9px] font-bold text-white uppercase tracking-wide drop-shadow-md leading-tight text-center break-words w-full px-0.5 max-h-[2.4em] overflow-hidden short-screen-tool-title">{config.name}</span>
       {actualCost > 0 && !isLocked && (
         <span className={`text-[9px] md:text-[10px] font-black leading-none mt-0.5 short-screen-tool-cost ${canAfford ? 'text-green-400' : 'text-red-400'}`}>${Math.floor(actualCost)}</span>
       )}
@@ -111,6 +112,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   grid,
   isNightMode = false,
   onToggleNightMode,
+  onResetProgress,
   canUndo,
   onUndo }) => {
   const newsRef = useRef<HTMLDivElement>(null);
@@ -118,7 +120,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const dailyIncome = React.useMemo(() => {
     if (!grid) return 0;
     let income = EconomyConfig.passiveSubsidy;
-    const taxBoost = stats.upgrades?.taxBoost || 0;
+    const taxBoost = (stats.upgrades?.taxBoost || 0) + ((stats.taxBoostExpiresAt ?? 0) > Date.now() ? 1 : 0);
     
     // 1. Citizen taxes
     income += stats.population * EconomyConfig.taxPerPerson * (1 + taxBoost);
@@ -139,7 +141,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
     });
     
     return Math.floor(income);
-  }, [grid, stats.population, stats.upgrades?.taxBoost]);
+  }, [grid, stats.population, stats.upgrades?.taxBoost, stats.taxBoostExpiresAt, stats.day]);
 
   const adRewardMoney = React.useMemo(() => {
      return Math.round(1000 * Math.pow(2.2, stats.level - 1));
@@ -149,7 +151,10 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   const [newsVisible, setNewsVisible] = useState(false);
   const [newsMinimized, setNewsMinimized] = useState(false);
   const [missionsExpanded, setMissionsExpanded] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
-  const [newsSize, setNewsSize] = useState({ width: 320, height: 200 });
+  const [newsSize, setNewsSize] = useState({
+    width: typeof window !== 'undefined' ? Math.min(320, window.innerWidth - 20) : 320,
+    height: 200
+  });
   const [newsPos, setNewsPos] = useState({ 
     x: typeof window !== 'undefined' ? (window.innerWidth <= 768 ? 10 : window.innerWidth - 350) : 10, 
     y: typeof window !== 'undefined' ? (window.innerHeight <= 768 ? window.innerHeight - 300 : window.innerHeight - 250) : 100 
@@ -275,6 +280,24 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       newsRef.current.scrollTop = newsRef.current.scrollHeight;
     }
   }, [newsFeed, newsMinimized]);
+
+  useEffect(() => {
+    const keepPanelsOnScreen = () => {
+      const maxWidth = Math.max(250, window.innerWidth - 20);
+      const width = Math.min(320, maxWidth);
+      const height = Math.min(200, Math.max(150, window.innerHeight - 120));
+      setNewsSize(current => ({
+        width: Math.min(current.width, width),
+        height: Math.min(current.height, height)
+      }));
+      setNewsPos(current => ({
+        x: Math.max(0, Math.min(current.x, window.innerWidth - width)),
+        y: Math.max(0, Math.min(current.y, window.innerHeight - height))
+      }));
+    };
+    window.addEventListener('resize', keepPanelsOnScreen);
+    return () => window.removeEventListener('resize', keepPanelsOnScreen);
+  }, []);
 
   const activeTools = Object.values(BUILDINGS)
      .filter(b => b.category === activeCategory)
@@ -414,24 +437,24 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       </div>
 
       {/* Camera Rotation and Zoom Controls */}
-      <div className="absolute top-1/2 -translate-y-1/2 w-full px-2 md:px-6 pointer-events-none flex justify-between z-30">
+      <div className="absolute top-[46%] -translate-y-1/2 w-full px-1.5 md:px-6 pointer-events-none flex justify-between z-30">
         {/* Left Side: Rotation */}
-        <div className="flex flex-col gap-4">
-            <button onPointerDown={(e) => { e.stopPropagation(); handleRotate(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
-               <RotateCcw size={24} />
+        <div className="flex flex-col gap-2 md:gap-4">
+            <button aria-label="Повернуть камеру влево" onPointerDown={(e) => { e.stopPropagation(); handleRotate(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+               <RotateCcw className="w-5 h-5 md:w-6 md:h-6" />
             </button>
-            <button onPointerDown={(e) => { e.stopPropagation(); handleRotate(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
-               <RotateCw size={24} />
+            <button aria-label="Повернуть камеру вправо" onPointerDown={(e) => { e.stopPropagation(); handleRotate(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+               <RotateCw className="w-5 h-5 md:w-6 md:h-6" />
             </button>
         </div>
         
         {/* Right Side: Zoom */}
-        <div className="flex flex-col gap-4">
-            <button onPointerDown={(e) => { e.stopPropagation(); handleZoom(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
-               <ZoomIn size={24} />
+        <div className="flex flex-col gap-2 md:gap-4">
+            <button aria-label="Приблизить" onPointerDown={(e) => { e.stopPropagation(); handleZoom(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+               <ZoomIn className="w-5 h-5 md:w-6 md:h-6" />
             </button>
-            <button onPointerDown={(e) => { e.stopPropagation(); handleZoom(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-3 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90">
-               <ZoomOut size={24} />
+            <button aria-label="Отдалить" onPointerDown={(e) => { e.stopPropagation(); handleZoom(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+               <ZoomOut className="w-5 h-5 md:w-6 md:h-6" />
             </button>
         </div>
       </div>
@@ -525,7 +548,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                        <p className="text-xs text-slate-400">Удвойте весь доход города на 3 минуты.</p>
                      </div>
                   </div>
-                  <button onClick={() => { onAdReward('TAX_BOOST'); setUpgradesVisible(false); }} disabled={stats.upgrades.taxBoost > 0.5} className="mt-4 bg-yellow-600 hover:bg-yellow-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-yellow-900/50 disabled:opacity-50 flex items-center justify-center gap-1">
+                  <button onClick={() => { onAdReward('TAX_BOOST'); setUpgradesVisible(false); }} disabled={(stats.taxBoostExpiresAt ?? 0) > Date.now()} className="mt-4 bg-yellow-600 hover:bg-yellow-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-yellow-900/50 disabled:opacity-50 flex items-center justify-center gap-1">
                     <Tv size={12} /> Смотреть рекламу — Активировать
                   </button>
                </div>
@@ -580,7 +603,14 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                         <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${isNightMode ? 'left-7' : 'left-1'}`} />
                     </button>
                  </div>
-                 
+
+                 <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/30 p-3">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-cyan-300 mb-1">Управление тачпадом</div>
+                    <p className="text-[10px] leading-relaxed text-slate-400">
+                      Два пальца — перемещение карты. Щипок или Ctrl + прокрутка — масштаб. Перетаскивание — перемещение, правый клик — поворот.
+                    </p>
+                 </div>
+
                  <div className="pt-4 border-t border-slate-800 space-y-3">
                      <button 
                        onClick={() => { 
@@ -593,7 +623,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                         Пройти обучение заново
                      </button>
                      
-                     <button onClick={() => { safeRemoveItem('polycity_save'); window.location.reload(); }} className="w-full border border-red-500/50 hover:bg-red-500/20 text-red-400 font-bold py-2 rounded-xl text-sm transition-colors">
+                     <button onClick={() => void onResetProgress?.()} className="w-full border border-red-500/50 hover:bg-red-500/20 text-red-400 font-bold py-2 rounded-xl text-sm transition-colors">
                         Сбросить прогресс
                      </button>
                      <p className="text-[10px] text-center text-slate-500 mt-2">Осторожно, это удалит весь ваш город!</p>
@@ -669,7 +699,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
       {/* Global Cancel Tool Button */}
       {(selectedTool !== null || canUndo) && (
-        <div className="absolute bottom-[160px] md:bottom-4 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-4 z-50 pointer-events-auto mb-safe transition-all animate-fade-in flex flex-col gap-2">
+        <div className="absolute bottom-[132px] md:bottom-4 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-4 z-50 pointer-events-auto mb-safe transition-all animate-fade-in flex flex-col gap-2">
           {canUndo && (
             <button 
               onClick={() => onUndo && onUndo()} 

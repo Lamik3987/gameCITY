@@ -12,6 +12,31 @@ class YandexSDKWrapper {
     private player: any = null;
     private initialized = false;
     private initPromise: Promise<void> | null = null;
+    private gameplayRequested = false;
+    private visibilityListenerBound = false;
+
+    private applyGameplayState(active: boolean) {
+        const gameplayAPI = this.ysdk?.features?.GameplayAPI;
+        if (!gameplayAPI) return;
+        try {
+            if (active) gameplayAPI.start();
+            else gameplayAPI.stop();
+        } catch (e) {
+            console.warn('Failed to update Yandex GameplayAPI state:', e);
+        }
+    }
+
+    startGameplay() {
+        this.gameplayRequested = true;
+        if (typeof document === 'undefined' || !document.hidden) {
+            this.applyGameplayState(true);
+        }
+    }
+
+    stopGameplay() {
+        this.gameplayRequested = false;
+        this.applyGameplayState(false);
+    }
 
     private loadSDKScript(): Promise<void> {
         if (window.YaGames) return Promise.resolve();
@@ -78,6 +103,16 @@ class YandexSDKWrapper {
                 if (this.ysdk.features && this.ysdk.features.LoadingAPI) {
                     this.ysdk.features.LoadingAPI.ready();
                     console.log('Yandex LoadingAPI ready called');
+                }
+                if (!this.visibilityListenerBound) {
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.hidden) this.applyGameplayState(false);
+                        else if (this.gameplayRequested) this.applyGameplayState(true);
+                    });
+                    this.visibilityListenerBound = true;
+                }
+                if (this.gameplayRequested && !document.hidden) {
+                    this.applyGameplayState(true);
                 }
                 try {
                     this.player = await this.ysdk.getPlayer();

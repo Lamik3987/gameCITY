@@ -12,6 +12,7 @@ import StartScreen from './components/StartScreen';
 import { sounds } from './components/soundEngine';
 import { yandexSDK } from './yandexSDK';
 import { safeGetItem, safeSetItem, safeRemoveItem } from './components/storage';
+import { GAME_TITLE } from './branding';
 
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
   constructor(props: {children: React.ReactNode}) {
@@ -114,6 +115,13 @@ function App() {
                 
                 setStats({ 
                    ...parsed.stats, 
+                   upgrades: {
+                     taxBoost: 0,
+                     roadDiscount: 0,
+                     parkBoost: 0,
+                     ...(parsed.stats.upgrades || {})
+                   },
+                   happiness: parsed.stats.happiness ?? 50,
                    tutorialCompleted: isDone,
                    tutorialStep: isDone ? 0 : (parsed.stats.tutorialStep ?? 1),
                    currentMissionIndex: parsed.stats.currentMissionIndex ?? 0
@@ -183,6 +191,7 @@ function App() {
   // Refs for accessing state inside intervals without dependencies
   const gridRef = useRef(grid);
   const statsRef = useRef(stats);
+  const isResettingRef = useRef(false);
   const lastTimeRef = useRef(performance.now());
 
   // Sync refs
@@ -198,17 +207,28 @@ function App() {
   // --- Load / Save ---
   useEffect(() => {
     if (!gameStarted) return;
-    const saveInterval = setInterval(() => {
-       yandexSDK.saveData({ grid: gridRef.current, stats: statsRef.current });
-    }, 10000);
-    return () => clearInterval(saveInterval);
+    const saveGame = () => isResettingRef.current
+      ? Promise.resolve()
+      : yandexSDK.saveData({ grid: gridRef.current, stats: statsRef.current });
+    const saveInterval = setInterval(saveGame, 10000);
+    const saveWhenHidden = () => {
+      if (document.hidden) void saveGame();
+    };
+    window.addEventListener('pagehide', saveGame);
+    document.addEventListener('visibilitychange', saveWhenHidden);
+    return () => {
+      clearInterval(saveInterval);
+      window.removeEventListener('pagehide', saveGame);
+      document.removeEventListener('visibilitychange', saveWhenHidden);
+      void saveGame();
+    };
   }, [gameStarted]);
 
   // --- Initial Setup ---
   useEffect(() => {
     if (!gameStarted) return;
 
-    addNewsItem({ id: Date.now().toString(), text: "Добро пожаловать в SkyCity: Построй свой город! Строительство разрешено.", type: 'positive' });
+    addNewsItem({ id: Date.now().toString(), text: `Добро пожаловать в ${GAME_TITLE} Строительство разрешено.`, type: 'positive' });
     lastTimeRef.current = performance.now();
   }, [gameStarted, addNewsItem]);
 
@@ -227,6 +247,7 @@ function App() {
 
       const prev = statsRef.current;
       const currentGrid = gridRef.current;
+      const effectiveTaxBoost = prev.upgrades.taxBoost + ((prev.taxBoostExpiresAt ?? 0) > Date.now() ? 1 : 0);
 
       let dailyIncome = EconomyConfig.passiveSubsidy;
       let dailyPopGrowth = 0;
@@ -256,47 +277,47 @@ function App() {
                      houses.push({x, y});
                  } else if (tile.buildingType === BuildingType.FactorySmall) {
                      factories.push({x, y, impact: -((config.incomeGen / 5) + 5)});
-                     const inc = EconomyConfig.factorySmallIncome * (1 + prev.upgrades.taxBoost);
+                     const inc = EconomyConfig.factorySmallIncome * (1 + effectiveTaxBoost);
                      dailyIncome += inc;
                      popups.push({ x, y, text: `+$${Math.floor(inc)}`, color: '#4ade80' });
                  } else if (tile.buildingType === BuildingType.FactoryLarge) {
                      factories.push({x, y, impact: -((config.incomeGen / 5) + 5)});
-                     const inc = EconomyConfig.factoryLargeIncome * (1 + prev.upgrades.taxBoost);
+                     const inc = EconomyConfig.factoryLargeIncome * (1 + effectiveTaxBoost);
                      dailyIncome += inc;
                      popups.push({ x, y, text: `+$${Math.floor(inc)}`, color: '#4ade80' });
                  } else if (tile.buildingType === BuildingType.ChemicalPlant) {
                      factories.push({x, y, impact: -((config.incomeGen / 5) + 15)});
-                     const inc = EconomyConfig.chemicalPlantIncome * (1 + prev.upgrades.taxBoost);
+                     const inc = EconomyConfig.chemicalPlantIncome * (1 + effectiveTaxBoost);
                      dailyIncome += inc;
                      popups.push({ x, y, text: `+$${Math.floor(inc)}`, color: '#4ade80' });
                  } else if (tile.buildingType === BuildingType.HighTechFactory) {
                      factories.push({x, y, impact: -((config.incomeGen / 5) + 2)});
-                     const inc = EconomyConfig.highTechFactoryIncome * (1 + prev.upgrades.taxBoost);
+                     const inc = EconomyConfig.highTechFactoryIncome * (1 + effectiveTaxBoost);
                      dailyIncome += inc;
                      popups.push({ x, y, text: `+$${Math.floor(inc)}`, color: '#4ade80' });
                  } else if (tile.buildingType === BuildingType.ParkSmall || tile.buildingType === BuildingType.ParkLarge || tile.buildingType === BuildingType.AquaPark || tile.buildingType === BuildingType.AmusementPark) {
                      parks.push({x, y, impact: (config.popGen || 5) + prev.upgrades.parkBoost});
                  } else if (tile.buildingType === BuildingType.ShopSmall) {
                      if (prev.population > 0) {
-                        const inc = EconomyConfig.shopSmallIncome * (1 + prev.upgrades.taxBoost);
+                        const inc = EconomyConfig.shopSmallIncome * (1 + effectiveTaxBoost);
                         dailyIncome += inc;
                         popups.push({ x, y, text: `+$${Math.floor(inc)}`, color: '#4ade80' });
                      }
                  } else if (tile.buildingType === BuildingType.ShopLarge) {
                      if (prev.population > 0) {
-                        const inc = EconomyConfig.shopLargeIncome * (1 + prev.upgrades.taxBoost);
+                        const inc = EconomyConfig.shopLargeIncome * (1 + effectiveTaxBoost);
                         dailyIncome += inc;
                         popups.push({ x, y, text: `+$${Math.floor(inc)}`, color: '#4ade80' });
                      }
                  } else if (tile.buildingType === BuildingType.Mall) {
                      if (prev.population > 0) {
-                        const inc = EconomyConfig.mallIncome * (1 + prev.upgrades.taxBoost);
+                        const inc = EconomyConfig.mallIncome * (1 + effectiveTaxBoost);
                         dailyIncome += inc;
                         popups.push({ x, y, text: `+$${Math.floor(inc)}`, color: '#4ade80' });
                      }
                  } else if (tile.buildingType === BuildingType.FinancialCenter) {
                      if (prev.population > 0) {
-                        const inc = EconomyConfig.financialCenterIncome * (1 + prev.upgrades.taxBoost);
+                        const inc = EconomyConfig.financialCenterIncome * (1 + effectiveTaxBoost);
                         dailyIncome += inc;
                         popups.push({ x, y, text: `+$${Math.floor(inc)}`, color: '#4ade80' });
                      }
@@ -307,7 +328,7 @@ function App() {
       });
 
       // Add basic tax income
-      const taxIncome = prev.population * EconomyConfig.taxPerPerson * (1 + prev.upgrades.taxBoost);
+      const taxIncome = prev.population * EconomyConfig.taxPerPerson * (1 + effectiveTaxBoost);
       dailyIncome += taxIncome;
       if (taxIncome > 0 && houses.length > 0) {
           const perHouse = taxIncome / houses.length;
@@ -480,13 +501,17 @@ function App() {
        return;
      }
 
-     setStats(prev => ({...prev, money: prev.money - cost}));
-     setGrid(prev => prev.map((row, rY) => row.map((t, rX) => {
+     const nextStats = { ...statsRef.current, money: statsRef.current.money - cost };
+     const nextGrid = gridCurrent.map((row, rY) => row.map((t, rX) => {
         if (Math.floor(rX / CHUNK_SIZE) === cx && Math.floor(rY / CHUNK_SIZE) === cy) {
            return { ...t, unlocked: true };
         }
         return t;
-     })));
+     }));
+     statsRef.current = nextStats;
+     gridRef.current = nextGrid;
+     setStats(nextStats);
+     setGrid(nextGrid);
      sounds.playCoin();
      addNewsItem({id: Date.now().toString(), text: `Владения расширены (Куплено за $${cost})!`, type: 'positive'});
   }, [addNewsItem]);
@@ -551,8 +576,11 @@ function App() {
             }
             
             setGrid(newGrid);
+            gridRef.current = newGrid;
             sounds.playBuild();
-            setStats(prev => ({ ...prev, money: Math.floor(prev.money - demolishCost) }));
+            const nextStats = { ...currentStats, money: Math.floor(currentStats.money - demolishCost) };
+            statsRef.current = nextStats;
+            setStats(nextStats);
         } else {
             addNewsItem({id: Date.now().toString(), text: `Снос стоит $${demolishCost}.`, type: 'negative'});
             triggerMoneyError();
@@ -598,10 +626,6 @@ function App() {
       const cost = Math.floor(buildingConfig.cost * (1 - discount));
 
       if (currentStats.money >= cost) {
-        setStats(prev => {
-             return { ...prev, money: prev.money - cost };
-        });
-        
         const newGrid = currentGrid.map(row => [...row]);
         for (let dy = 0; dy < bHeight; dy++) {
            for (let dx = 0; dx < bWidth; dx++) {
@@ -614,6 +638,10 @@ function App() {
               };
            }
         }
+        const nextStats = { ...currentStats, money: currentStats.money - cost };
+        statsRef.current = nextStats;
+        gridRef.current = newGrid;
+        setStats(nextStats);
         sounds.playBuild();
         setGrid(newGrid);
       } else {
@@ -648,13 +676,12 @@ function App() {
                  addNewsItem({id: Date.now().toString(), text: `Получен грант! В казну добавлено: $${adRewardMoney.toLocaleString()}`, type: 'positive'});
              } else if (rewardStr === 'TAX_BOOST') {
                  addNewsItem({id: Date.now().toString(), text: "Активирована Золотая Лихорадка! Доход удвоен!", type: 'positive'});
-                 setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 1}}));
-                 setTimeout(() => {
-                    setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: 0}}));
-                    addNewsItem({id: Date.now().toString(), text: "Золотая Лихорадка закончилась.", type: 'neutral'});
-                 }, 180000); // 3 minutes
+                  setStats(prev => ({...prev, taxBoostExpiresAt: Date.now() + 180000}));
+                  setTimeout(() => {
+                     addNewsItem({id: Date.now().toString(), text: "Золотая Лихорадка закончилась.", type: 'neutral'});
+                  }, 180000); // 3 minutes
              } else if (rewardStr === 'TAX_PERM_BOOST') {
-                 setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: prev.upgrades.taxBoost + 0.1}}));
+                  setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: Math.min(1, prev.upgrades.taxBoost + 0.1)}}));
                  addNewsItem({id: Date.now().toString(), text: "Налоги успешно повышены на 10% навсегда!", type: 'positive'});
              }
          },
@@ -706,12 +733,18 @@ function App() {
             moneyError={moneyError}
             grid={grid}
             isNightMode={isNightMode}
-            onToggleNightMode={() => {
+             onToggleNightMode={() => {
                 const newMode = !isNightMode;
                 setIsNightMode(newMode);
                 safeSetItem('polycity_night_mode', newMode.toString());
-            }}
-          />
+             }}
+             onResetProgress={async () => {
+                isResettingRef.current = true;
+                await yandexSDK.clearData();
+                safeRemoveItem('polycity_tutorial_completed');
+                window.location.reload();
+             }}
+           />
           {showLevelUp && (
              <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto">
                <div className="bg-sky-900 border-2 border-cyan-400 p-8 rounded-2xl shadow-2xl text-center max-w-md w-full mx-4">

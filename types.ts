@@ -83,6 +83,7 @@ export interface CityStats {
   tutorialStep: number;
   tutorialCompleted: boolean;
   currentMissionIndex?: number;
+  taxBoostExpiresAt?: number;
 }
 
 export interface NewsItem {

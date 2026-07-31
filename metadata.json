@@ -1,6 +1,6 @@
 {
-  "name": "Remix: Sky Metropolis",
-  "description": "Manage a virtual metropolis and fulfill tasks provided by Gemini.",
+  "name": "SkyCity",
+  "description": "SkyCity — построй и развивай собственный город.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

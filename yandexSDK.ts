@@ -4,16 +4,47 @@ declare global {
         ysdk: any;
     }
 }
-import { safeGetItem, safeSetItem } from './components/storage';
+import { safeGetItem, safeSetItem, safeRemoveItem } from './components/storage';
 import { setLang } from './i18n';
 
 class YandexSDKWrapper {
     private ysdk: any = null;
     private player: any = null;
     private initialized = false;
+    private initPromise: Promise<void> | null = null;
+
+    private loadSDKScript(): Promise<void> {
+        if (window.YaGames) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+            const existing = document.querySelector<HTMLScriptElement>('script[data-yandex-games-sdk]');
+            if (existing) {
+                existing.addEventListener('load', () => resolve(), { once: true });
+                existing.addEventListener('error', () => reject(new Error('Yandex Games SDK failed to load')), { once: true });
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'https://yandex.ru/games/sdk/v2';
+            script.async = true;
+            script.dataset.yandexGamesSdk = 'true';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Yandex Games SDK failed to load'));
+            document.head.appendChild(script);
+        });
+    }
 
     async init() {
         if (this.initialized) return;
+        if (this.initPromise) return this.initPromise;
+
+        this.initPromise = this.initialize();
+        try {
+            await this.initPromise;
+        } finally {
+            this.initPromise = null;
+        }
+    }
+
+    private async initialize() {
 
         try {
             // Check URL for lang parameter for local testing
@@ -22,6 +53,18 @@ class YandexSDKWrapper {
             if (urlLang) {
                 setLang(urlLang);
             }
+
+            const isLocalStandalone = (
+                window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1'
+            ) && window.self === window.top;
+
+            if (isLocalStandalone) {
+                console.info('Yandex Games SDK disabled for standalone local preview.');
+                return;
+            }
+
+            await this.loadSDKScript();
 
             if (typeof window !== 'undefined' && window.YaGames) {
                 this.ysdk = await window.YaGames.init();
@@ -101,6 +144,16 @@ class YandexSDKWrapper {
         }
         const local = safeGetItem('polycity_save');
         return local ? JSON.parse(local) : null;
+    }
+
+    async clearData(): Promise<void> {
+        safeRemoveItem('polycity_save');
+        if (!this.player) return;
+        try {
+            await this.player.setData({});
+        } catch (e) {
+            console.error('Failed to clear Yandex Cloud save', e);
+        }
     }
 
     /**

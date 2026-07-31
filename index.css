@@ -44,6 +44,63 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgba(255, 255, 255, 0.4);
   }
+
+  .camera-controls {
+    top: auto !important;
+    right: 1rem !important;
+    bottom: calc(10rem + env(safe-area-inset-bottom)) !important;
+    left: auto !important;
+    width: auto !important;
+    padding: 0 !important;
+    transform: none !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+  .camera-control-group { display: contents !important; }
+  .camera-control-button {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    padding: 0.65rem !important;
+  }
+
+  @media (max-width: 767px) {
+    .camera-controls {
+      right: 0.5rem !important;
+      bottom: calc(8.5rem + env(safe-area-inset-bottom)) !important;
+      gap: 0.35rem;
+    }
+    .camera-control-button {
+      width: 2.75rem;
+      height: 2.75rem;
+      padding: 0.5rem !important;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .hud-stack { width: calc(100vw - 4.25rem) !important; }
+  }
+
+  @media (max-height: 560px) {
+    .camera-controls {
+      right: 0.35rem !important;
+      bottom: calc(7.25rem + env(safe-area-inset-bottom)) !important;
+    }
+    .camera-control-button {
+      width: 2.5rem;
+      height: 2.5rem;
+      padding: 0.4rem !important;
+    }
+    .ad-popup-responsive {
+      top: auto !important;
+      right: auto !important;
+      bottom: calc(7.25rem + env(safe-area-inset-bottom)) !important;
+      left: 0.35rem !important;
+      max-width: calc(100vw - 7rem) !important;
+    }
+  }
   
   @media (max-height: 450px) {
     .short-screen-hide { display: none !important; }

@@ -159,6 +159,7 @@ function App() {
   const [floatingTexts, setFloatingTexts] = useState<FloatingTextData[]>([]);
   const [newsFeed, setNewsFeed] = useState<NewsItem[]>([]);
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
+  const [cityReport, setCityReport] = useState<{ day: number; income: number; population: number } | null>(null);
   const [isNightMode, setIsNightMode] = useState(() => safeGetItem('polycity_night_mode') === 'true');
   
   const [moneyError, setMoneyError] = useState(false);
@@ -192,11 +193,14 @@ function App() {
   const gridRef = useRef(grid);
   const statsRef = useRef(stats);
   const isResettingRef = useRef(false);
+  const gamePausedRef = useRef(false);
   const lastTimeRef = useRef(performance.now());
 
   // Sync refs
   useEffect(() => { gridRef.current = grid; }, [grid]);
   useEffect(() => { statsRef.current = stats; }, [stats]);
+
+  useEffect(() => () => yandexSDK.stopGameplay(), []);
 
   // --- Logic Wrappers ---
 
@@ -241,7 +245,7 @@ function App() {
 
     const intervalId = setInterval(() => {
       // Пауза, если вкладка не активна (свернута)
-      if (typeof document !== 'undefined' && document.hidden) {
+      if (gamePausedRef.current || (typeof document !== 'undefined' && document.hidden)) {
         return;
       }
 
@@ -386,6 +390,7 @@ function App() {
       const nextMilestone = MILESTONES.find(m => m.level === prev.level + 1);
       if (nextMilestone && newPop >= nextMilestone.requiredPop) {
         newLevel = nextMilestone.level;
+        gamePausedRef.current = true;
         setShowLevelUp(newLevel);
         sounds.playLevelUp();
         addNewsItem({ id: Date.now().toString(), text: `Уровень повышен! Добро пожаловать: ${nextMilestone.name}`, type: 'positive' });
@@ -431,11 +436,21 @@ function App() {
          window.dispatchEvent(new CustomEvent('trigger-ad-popup'));
       }
 
+      const nextDay = prev.day + 1;
+      if (nextDay > 1 && nextDay % 120 === 0 && newLevel === prev.level) {
+         gamePausedRef.current = true;
+         setCityReport({
+            day: nextDay,
+            income: Math.floor(dailyIncome),
+            population: newPop
+         });
+      }
+
       setStats(p => ({
         ...p,
         money: p.money + Math.floor(dailyIncome),
         population: newPop,
-        day: p.day + 1,
+        day: nextDay,
         happiness: newHappiness,
         level: newLevel
       }));
@@ -660,11 +675,14 @@ function App() {
     yandexSDK.showFullscreenAd(() => {
         sounds.setBgmVolume(vol / 100);
         setGameStarted(true);
+        yandexSDK.startGameplay();
     });
   };
 
   const handleAdReward = (rewardStr: string) => {
      sounds.setBgmVolume(0); // Pause music
+     gamePausedRef.current = true;
+     yandexSDK.stopGameplay();
 
      yandexSDK.showRewardedVideo(
          // onRewarded
@@ -691,11 +709,15 @@ function App() {
          () => {
              const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
              sounds.setBgmVolume(vol / 100);
+             gamePausedRef.current = false;
+             yandexSDK.startGameplay();
          },
          // onError
          (e) => {
              const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
              sounds.setBgmVolume(vol / 100);
+             gamePausedRef.current = false;
+             yandexSDK.startGameplay();
              addNewsItem({id: Date.now().toString(), text: "Ошибка загрузки рекламы. Попробуйте позже.", type: 'negative'});
          }
      );
@@ -753,13 +775,46 @@ function App() {
                  <p className="text-white text-xl font-bold mb-1">Вы достигли {showLevelUp} уровня!</p>
                  <p className="text-cyan-200 text-sm mb-6">Продолжайте строить, чтобы открыть еще больше зданий.</p>
                  <button onClick={() => {
-                     setShowLevelUp(null);
                      const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
                      sounds.setBgmVolume(0);
+                     yandexSDK.stopGameplay();
                      yandexSDK.showFullscreenAd(() => {
                          sounds.setBgmVolume(vol / 100);
+                         setShowLevelUp(null);
+                         gamePausedRef.current = false;
+                         yandexSDK.startGameplay();
                      });
                   }} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">Продолжить</button>
+               </div>
+             </div>
+          )}
+          {cityReport && !showLevelUp && (
+             <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto p-4">
+               <div className="bg-slate-900 border-2 border-indigo-400 p-5 sm:p-7 rounded-2xl shadow-2xl text-center max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto">
+                 <div className="text-4xl sm:text-5xl mb-3" aria-hidden="true">🏙️</div>
+                 <h2 className="text-2xl sm:text-3xl font-black text-white mb-2">Отчёт города</h2>
+                 <p className="text-indigo-200 text-sm mb-5">День {cityReport.day}. Совет города подвёл промежуточные итоги.</p>
+                 <div className="grid grid-cols-2 gap-3 mb-6 text-left">
+                   <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+                     <span className="block text-[10px] uppercase tracking-wider text-slate-400">Население</span>
+                     <strong className="text-lg text-cyan-300">{cityReport.population.toLocaleString()}</strong>
+                   </div>
+                   <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+                     <span className="block text-[10px] uppercase tracking-wider text-slate-400">Доход за день</span>
+                     <strong className="text-lg text-green-400">+${cityReport.income.toLocaleString()}</strong>
+                   </div>
+                 </div>
+                 <button onClick={() => {
+                     const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
+                     sounds.setBgmVolume(0);
+                     yandexSDK.stopGameplay();
+                     yandexSDK.showFullscreenAd(() => {
+                         sounds.setBgmVolume(vol / 100);
+                         setCityReport(null);
+                         gamePausedRef.current = false;
+                         yandexSDK.startGameplay();
+                     });
+                  }} className="w-full min-h-12 bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">Продолжить</button>
                </div>
              </div>
           )}

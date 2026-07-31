@@ -10,7 +10,7 @@ import { MISSIONS } from '../missions';
 import { sounds } from './soundEngine';
 import { TutorialManager, TUTORIAL_STEPS } from './TutorialManager';
 import { safeGetItem, safeSetItem, safeRemoveItem } from './storage';
-import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut, Gift } from 'lucide-react';
+import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut, Gift, BookOpen, MousePointer2, Laptop, Smartphone } from 'lucide-react';
 import { t } from '../i18n';
 
 interface UIOverlayProps {
@@ -160,6 +160,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
     y: typeof window !== 'undefined' ? (window.innerHeight <= 768 ? window.innerHeight - 300 : window.innerHeight - 250) : 100 
   });
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [controlsGuideVisible, setControlsGuideVisible] = useState(false);
   const [adPopupVisible, setAdPopupVisible] = useState(false);
   const [volume, setVolume] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -320,7 +321,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         <div className={`absolute inset-0 z-40 bg-black/60 transition-opacity duration-500 backdrop-blur-sm ${currentTutorial.actionRequired?.startsWith('place_') ? 'pointer-events-none' : 'pointer-events-auto'}`} />
       )}
 
-      <div className="absolute top-2 left-2 md:top-4 md:left-4 pointer-events-none flex flex-col gap-2 z-auto max-w-[calc(100vw-16px)] md:max-w-md short-screen-stats-container">
+      <div className="hud-stack absolute top-2 left-2 md:top-4 md:left-4 pointer-events-none flex flex-col gap-2 z-auto w-[min(30rem,calc(100vw-4.75rem))] short-screen-stats-container">
         <div className={`relative ${getHighlightClass('stats')} bg-gray-900/95 text-white p-1.5 md:p-3 rounded-xl border border-gray-700 shadow-xl backdrop-blur-md flex gap-2 md:gap-6 items-center w-full md:w-auto overflow-hidden`}>
           <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''} relative px-1`}>
             <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">Казна</span>
@@ -420,16 +421,16 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
             })()}
         </div>
         
-        <div className={`relative ${getHighlightClass('top-buttons')} flex flex-col md:flex-row gap-2 items-start mt-1 p-0.5`}>
+        <div className={`relative ${getHighlightClass('top-buttons')} flex flex-row flex-wrap gap-2 items-start mt-1 p-0.5`}>
            <button 
              onPointerDown={(e) => { e.stopPropagation(); setUpgradesVisible(true); }}
-             className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white font-black p-2 md:py-2 md:px-4 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.5)] flex items-center justify-center gap-2 border border-yellow-300/50 transition-transform active:scale-95 text-xs animate-[pulse_2s_ease-in-out_infinite]"
+             className="min-h-11 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white font-black p-2 md:py-2 md:px-4 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.5)] flex items-center justify-center gap-2 border border-yellow-300/50 transition-transform active:scale-95 text-xs animate-[pulse_2s_ease-in-out_infinite]"
              title="Получить Бонус"
            >
              <Gift size={16} className="text-white drop-shadow-md" /> <span className="hidden md:inline">Получить Бонус</span>
            </button>
            {!newsVisible && (
-            <button onPointerDown={(e) => { e.stopPropagation(); setNewsVisible(true); }} title="Новости" className="bg-gray-800 hover:bg-gray-700 text-white text-xs p-2 md:px-3 md:py-1.5 rounded-xl md:rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
+            <button onPointerDown={(e) => { e.stopPropagation(); setNewsVisible(true); }} title="Новости" className="min-h-11 bg-gray-800 hover:bg-gray-700 text-white text-xs p-2 md:px-3 md:py-1.5 rounded-xl md:rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
               <AlertCircle size={14} /> <span className="hidden md:inline">Открыть Новости</span>
             </button>
           )}
@@ -437,23 +438,23 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       </div>
 
       {/* Camera Rotation and Zoom Controls */}
-      <div className="absolute top-[46%] -translate-y-1/2 w-full px-1.5 md:px-6 pointer-events-none flex justify-between z-30">
+      <div className="camera-controls absolute top-[46%] -translate-y-1/2 w-full px-1.5 md:px-6 pointer-events-none flex justify-between z-30">
         {/* Left Side: Rotation */}
-        <div className="flex flex-col gap-2 md:gap-4">
-            <button aria-label="Повернуть камеру влево" onPointerDown={(e) => { e.stopPropagation(); handleRotate(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+        <div className="camera-control-group flex flex-col gap-2 md:gap-4">
+            <button aria-label="Повернуть камеру влево" onPointerDown={(e) => { e.stopPropagation(); handleRotate(1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
                <RotateCcw className="w-5 h-5 md:w-6 md:h-6" />
             </button>
-            <button aria-label="Повернуть камеру вправо" onPointerDown={(e) => { e.stopPropagation(); handleRotate(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+            <button aria-label="Повернуть камеру вправо" onPointerDown={(e) => { e.stopPropagation(); handleRotate(-1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
                <RotateCw className="w-5 h-5 md:w-6 md:h-6" />
             </button>
         </div>
         
         {/* Right Side: Zoom */}
-        <div className="flex flex-col gap-2 md:gap-4">
-            <button aria-label="Приблизить" onPointerDown={(e) => { e.stopPropagation(); handleZoom(1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+        <div className="camera-control-group flex flex-col gap-2 md:gap-4">
+            <button aria-label="Приблизить" onPointerDown={(e) => { e.stopPropagation(); handleZoom(1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
                <ZoomIn className="w-5 h-5 md:w-6 md:h-6" />
             </button>
-            <button aria-label="Отдалить" onPointerDown={(e) => { e.stopPropagation(); handleZoom(-1); }} className="pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+            <button aria-label="Отдалить" onPointerDown={(e) => { e.stopPropagation(); handleZoom(-1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
                <ZoomOut className="w-5 h-5 md:w-6 md:h-6" />
             </button>
         </div>
@@ -558,8 +559,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       )}
 
       {/* Ad Popup Trigger Modal */}
-      {adPopupVisible && (
-        <div id="ad-popup-container" className="absolute top-24 right-2 md:right-4 pointer-events-auto animate-bounce z-40 max-w-[calc(100vw-16px)]">
+      {adPopupVisible && stats.tutorialCompleted && (
+        <div id="ad-popup-container" className="ad-popup-responsive absolute left-2 bottom-[8.5rem] md:left-auto md:bottom-auto md:top-24 md:right-4 pointer-events-auto animate-bounce z-40 max-w-[calc(100vw-7rem)] md:max-w-[calc(100vw-16px)]">
            <div className="bg-gradient-to-br from-yellow-500 to-orange-600 p-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.4)] border border-yellow-300 w-64 max-w-full">
               <button onClick={() => setAdPopupVisible(false)} className="absolute top-1 right-1 text-yellow-100 hover:text-white"><X size={16}/></button>
               <div className="flex gap-3 items-center">
@@ -604,12 +605,18 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                     </button>
                  </div>
 
-                 <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/30 p-3">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-cyan-300 mb-1">Управление тачпадом</div>
-                    <p className="text-[10px] leading-relaxed text-slate-400">
-                      Два пальца — перемещение карты. Щипок или Ctrl + прокрутка — масштаб. Перетаскивание — перемещение, правый клик — поворот.
-                    </p>
-                 </div>
+                 <button
+                   onClick={() => { setSettingsVisible(false); setControlsGuideVisible(true); }}
+                   className="w-full min-h-12 rounded-xl border border-cyan-400/40 bg-cyan-500/10 hover:bg-cyan-500/20 px-4 py-3 text-left transition-colors flex items-center gap-3 group"
+                 >
+                   <span className="grid place-items-center w-9 h-9 shrink-0 rounded-lg bg-cyan-500/20 text-cyan-300 group-hover:bg-cyan-500/30">
+                     <BookOpen size={19} />
+                   </span>
+                   <span className="min-w-0">
+                     <span className="block text-sm font-black text-white">Гайд по управлению</span>
+                     <span className="block text-[10px] leading-relaxed text-slate-400">Мышь, тачпад и сенсорный экран</span>
+                   </span>
+                 </button>
 
                  <div className="pt-4 border-t border-slate-800 space-y-3">
                      <button 
@@ -633,6 +640,77 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                  Закрыть
               </button>
            </div>
+        </div>
+      )}
+
+      {/* Controls Guide */}
+      {controlsGuideVisible && (
+        <div className="absolute inset-0 bg-black/70 z-[110] flex items-center justify-center animate-fade-in backdrop-blur-md pointer-events-auto overflow-y-auto p-3 sm:p-5">
+          <div className="bg-slate-900 border border-cyan-400/40 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[calc(100dvh-1.5rem)] overflow-y-auto custom-scrollbar">
+            <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-xl border-b border-slate-700 px-4 sm:px-6 py-4 flex items-center gap-3">
+              <span className="grid place-items-center w-10 h-10 shrink-0 rounded-xl bg-cyan-500/15 text-cyan-300">
+                <BookOpen size={21} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg sm:text-2xl font-black text-white leading-tight">Гайд по управлению</h2>
+                <p className="text-[10px] sm:text-xs text-slate-400">Выберите удобный способ и стройте город без лишних движений.</p>
+              </div>
+              <button aria-label="Закрыть гайд" onClick={() => setControlsGuideVisible(false)} className="min-w-11 min-h-11 grid place-items-center rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
+                <X size={22} />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <section className="rounded-2xl border border-indigo-400/25 bg-indigo-500/5 p-4">
+                <div className="flex items-center gap-2 mb-3 text-indigo-300">
+                  <MousePointer2 size={19} />
+                  <h3 className="font-black text-white">Мышь</h3>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-300 leading-relaxed">
+                  <li><b className="text-white">Левая кнопка + движение</b> — перемещать карту.</li>
+                  <li><b className="text-white">Правая кнопка + движение</b> — вращать камеру.</li>
+                  <li><b className="text-white">Колесо</b> — приближать и отдалять.</li>
+                  <li><b className="text-white">Обычный клик</b> — строить на выбранной клетке.</li>
+                </ul>
+              </section>
+
+              <section className="rounded-2xl border border-cyan-400/25 bg-cyan-500/5 p-4">
+                <div className="flex items-center gap-2 mb-3 text-cyan-300">
+                  <Laptop size={19} />
+                  <h3 className="font-black text-white">Тачпад</h3>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-300 leading-relaxed">
+                  <li><b className="text-white">Два пальца</b> — плавно перемещать карту.</li>
+                  <li><b className="text-white">Щипок</b> или <b className="text-white">Ctrl + прокрутка</b> — масштаб.</li>
+                  <li><b className="text-white">Правый клик + движение</b> — вращать камеру.</li>
+                  <li><b className="text-white">Кнопки справа</b> — точный поворот и масштаб.</li>
+                </ul>
+              </section>
+
+              <section className="rounded-2xl border border-emerald-400/25 bg-emerald-500/5 p-4">
+                <div className="flex items-center gap-2 mb-3 text-emerald-300">
+                  <Smartphone size={19} />
+                  <h3 className="font-black text-white">Телефон</h3>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-300 leading-relaxed">
+                  <li><b className="text-white">Свайп одним пальцем</b> — перемещать карту.</li>
+                  <li><b className="text-white">Короткое касание</b> — построить объект.</li>
+                  <li><b className="text-white">Щипок двумя пальцами</b> — изменить масштаб.</li>
+                  <li><b className="text-white">Поворот двумя пальцами</b> — вращать камеру.</li>
+                </ul>
+              </section>
+            </div>
+
+            <div className="mx-4 sm:mx-6 mb-4 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-[11px] sm:text-xs text-slate-300 leading-relaxed">
+              <b className="text-amber-300">Как строить:</b> выберите здание в нижней панели, затем нажмите на свободную купленную клетку. Зелёная подсветка означает, что строительство разрешено; красная — место занято или недоступно.
+            </div>
+
+            <div className="sticky bottom-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700 p-4 sm:px-6 flex justify-end">
+              <button onClick={() => { setControlsGuideVisible(false); setSettingsVisible(true); }} className="w-full sm:w-auto min-h-12 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white font-black px-6 py-3 rounded-xl shadow-lg transition-transform active:scale-95">
+                Вернуться в настройки
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

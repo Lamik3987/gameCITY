@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import React from 'react';
-import { GAME_NAME, GAME_TAGLINE } from '../branding';
+import { GAME_TITLE } from '../branding';
 
 interface StartScreenProps {
   onStart: () => void;
@@ -17,12 +17,9 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
                 <div className="relative z-10">
-            <h1 className="inline-block text-4xl md:text-5xl font-black leading-[1.2] pb-1 -mb-1 bg-gradient-to-br from-white via-cyan-200 to-blue-400 bg-clip-text text-transparent tracking-tight overflow-visible" aria-label="SkyCity">
-            {GAME_NAME}
+            <h1 className="inline-block max-w-full text-3xl sm:text-4xl md:text-5xl font-black leading-[1.18] pb-2 mb-5 sm:mb-7 bg-gradient-to-br from-white via-cyan-200 to-blue-400 bg-clip-text text-transparent tracking-tight overflow-visible break-words" aria-label={GAME_TITLE}>
+            {GAME_TITLE}
             </h1>
-            <p className="text-slate-300 mb-6 sm:mb-8 text-xs sm:text-sm font-medium uppercase tracking-widest">
-            {GAME_TAGLINE}
-            </p>
 
             <button 
             onClick={onStart}

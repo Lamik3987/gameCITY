@@ -1,3 +1,8 @@
-export const GAME_NAME = 'SkyCity';
-export const GAME_TAGLINE = 'Построй свой город!';
-export const GAME_TITLE = `${GAME_NAME}: ${GAME_TAGLINE}`;
+import { getLang } from './i18n';
+
+export const GAME_TITLES = {
+  ru: 'SkyCity: Построй свой город!',
+  en: 'SkyCity: Build Your City!',
+} as const;
+
+export const getGameTitle = () => GAME_TITLES[getLang()];

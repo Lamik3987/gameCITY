@@ -1,4 +1,5 @@
 import { CityStats, Grid, BuildingType } from './types';
+import { t } from './i18n';
 
 export interface Mission {
   id: number;
@@ -42,8 +43,8 @@ const countUnlockedChunks = (grid: Grid): number => {
 export const MISSIONS: Mission[] = [
   {
     id: 1,
-    title: 'Первые жители',
-    description: 'Постройте жилые дома и заселите жителей.',
+    get title() { return t('mission_1_title'); },
+    get description() { return t('mission_1_desc'); },
     rewardText: '+$500',
     rewardValue: 500,
     check: (stats) => stats.population >= 15,
@@ -51,8 +52,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 2,
-    title: 'Развитие поселения',
-    description: 'Повышайте население, чтобы достичь 2-го уровня.',
+    get title() { return t('mission_2_title'); },
+    get description() { return t('mission_2_desc'); },
     rewardText: '+$1,500',
     rewardValue: 1500,
     check: (stats) => stats.level >= 2,
@@ -60,8 +61,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 3,
-    title: 'Малый бизнес',
-    description: 'Постройте хотя бы один малый рынок для торговли.',
+    get title() { return t('mission_3_title'); },
+    get description() { return t('mission_3_desc'); },
     rewardText: '+$800',
     rewardValue: 800,
     check: (_, grid) => countBuildings(grid, BuildingType.ShopSmall) >= 1,
@@ -69,8 +70,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 4,
-    title: 'Первая фабрика',
-    description: 'Создайте рабочие места, построив фабрику.',
+    get title() { return t('mission_4_title'); },
+    get description() { return t('mission_4_desc'); },
     rewardText: '+$1,000',
     rewardValue: 1000,
     check: (_, grid) => countBuildings(grid, BuildingType.FactorySmall) >= 1,
@@ -78,8 +79,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 5,
-    title: 'Счастливые горожане',
-    description: 'Поднимите средний уровень счастья жителей до 70%.',
+    get title() { return t('mission_5_title'); },
+    get description() { return t('mission_5_desc'); },
     rewardText: '+$2,000',
     rewardValue: 2000,
     check: (stats) => stats.happiness >= 70,
@@ -87,8 +88,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 6,
-    title: 'Новые территории',
-    description: 'Купите дополнительные участки земли. Нужно открыть 3 чанка.',
+    get title() { return t('mission_6_title'); },
+    get description() { return t('mission_6_desc'); },
     rewardText: '+$3,000',
     rewardValue: 3000,
     check: (_, grid) => countUnlockedChunks(grid) >= 3,
@@ -96,8 +97,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 7,
-    title: 'Растущий городок',
-    description: 'Продолжайте строить, чтобы достичь 4-го уровня.',
+    get title() { return t('mission_7_title'); },
+    get description() { return t('mission_7_desc'); },
     rewardText: '+$5,000',
     rewardValue: 5000,
     check: (stats) => stats.level >= 4,
@@ -105,8 +106,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 8,
-    title: 'Экологическая гармония',
-    description: 'Постройте Городской Парк для очищения воздуха и счастья.',
+    get title() { return t('mission_8_title'); },
+    get description() { return t('mission_8_desc'); },
     rewardText: '+$4,000',
     rewardValue: 4000,
     check: (_, grid) => countBuildings(grid, BuildingType.ParkLarge) >= 1,
@@ -114,8 +115,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 9,
-    title: 'Индустриальный гигант',
-    description: 'Постройте Огромный Завод для крупного производства.',
+    get title() { return t('mission_9_title'); },
+    get description() { return t('mission_9_desc'); },
     rewardText: '+$6,000',
     rewardValue: 6000,
     check: (_, grid) => countBuildings(grid, BuildingType.FactoryLarge) >= 1,
@@ -123,8 +124,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 10,
-    title: 'Финансовый триумф',
-    description: 'Развейте мегаполис и достигните 6-го уровня.',
+    get title() { return t('mission_10_title'); },
+    get description() { return t('mission_10_desc'); },
     rewardText: '+$10,000',
     rewardValue: 10000,
     check: (stats) => stats.level >= 6,

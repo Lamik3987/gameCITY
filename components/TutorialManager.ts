@@ -1,4 +1,3 @@
-import { BuildingType } from '../types';
 import { t } from '../i18n';
 
 export type TutorialStep = {

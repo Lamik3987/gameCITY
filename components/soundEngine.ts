@@ -12,6 +12,18 @@ class SoundEngine {
     private bgmStartOffset = 0;
     private bgmStartTime = 0;
     private bgmLoaded = false;
+    private platformPaused = false;
+    private visibilityListenerBound = false;
+
+    private syncAudioContextState() {
+        if (!this.ctx) return;
+        const shouldPause = this.platformPaused || (typeof document !== 'undefined' && document.hidden);
+        if (shouldPause && this.ctx.state === 'running') {
+            void this.ctx.suspend();
+        } else if (!shouldPause && this.ctx.state === 'suspended') {
+            void this.ctx.resume();
+        }
+    }
 
     init() {
         if (!this.ctx) {
@@ -21,20 +33,20 @@ class SoundEngine {
             this.bgmGain.gain.value = this.bgmVolume;
             
             // Handle Yandex Games requirement 1.3: Sound outside game
-            if (typeof document !== 'undefined') {
+            if (typeof document !== 'undefined' && !this.visibilityListenerBound) {
                 document.addEventListener('visibilitychange', () => {
-                    if (document.hidden) {
-                        if (this.ctx?.state === 'running') this.ctx.suspend();
-                    } else {
-                        if (this.ctx?.state === 'suspended') this.ctx.resume();
-                    }
+                    this.syncAudioContextState();
                 });
+                this.visibilityListenerBound = true;
             }
         }
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
+        this.syncAudioContextState();
         this.initBGM();
+    }
+
+    setPlatformPaused(paused: boolean) {
+        this.platformPaused = paused;
+        this.syncAudioContextState();
     }
 
     private async initBGM() {

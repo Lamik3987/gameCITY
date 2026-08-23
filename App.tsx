@@ -4,7 +4,7 @@
 */
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Grid, TileData, BuildingType, BuildingCategory, CityStats, NewsItem, FloatingTextData } from './types';
-import { GRID_SIZE, CHUNK_SIZE, BUILDINGS, DAY_MS, INITIAL_MONEY, MILESTONES, EconomyConfig } from './constants';
+import { GRID_SIZE, CHUNK_SIZE, BUILDINGS, INITIAL_MONEY, MILESTONES, EconomyConfig } from './constants';
 import { wouldFormRoadBlock } from './roadUtils';
 import IsoMap from './components/IsoMap';
 import UIOverlay from './components/UIOverlay';
@@ -12,7 +12,10 @@ import StartScreen from './components/StartScreen';
 import { sounds } from './components/soundEngine';
 import { yandexSDK } from './yandexSDK';
 import { safeGetItem, safeSetItem, safeRemoveItem } from './components/storage';
-import { GAME_TITLE } from './branding';
+import { getGameTitle } from './branding';
+import { getLang, t } from './i18n';
+
+const formatNumber = (value: number) => value.toLocaleString(getLang() === 'ru' ? 'ru-RU' : 'en-US');
 
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
   constructor(props: {children: React.ReactNode}) {
@@ -29,9 +32,9 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
       return (
         <div style={{ color: 'white', background: '#1e293b', padding: 40, zIndex: 99999, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif', textAlign: 'center' }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>😔</div>
-          <h1 style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>Произошла ошибка</h1>
-          <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 24 }}>Что-то пошло не так. Попробуйте перезагрузить игру.</p>
-          <button onClick={() => window.location.reload()} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '12px 32px', borderRadius: 12, fontSize: 16, fontWeight: 'bold', cursor: 'pointer' }}>Перезагрузить</button>
+          <h1 style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>{t('app_error_title')}</h1>
+          <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 24 }}>{t('app_error_message')}</p>
+          <button onClick={() => window.location.reload()} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '12px 32px', borderRadius: 12, fontSize: 16, fontWeight: 'bold', cursor: 'pointer' }}>{t('app_reload')}</button>
         </div>
       );
     }
@@ -61,9 +64,12 @@ const createInitialGrid = (): Grid => {
 function App() {
   // --- Game State ---
   const [gameStarted, setGameStarted] = useState(false);
+  const [dataReady, setDataReady] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
-     yandexSDK.init().then(async () => {
+     let cancelled = false;
+     const loadSave = async () => {
          try {
              const parsed = await yandexSDK.loadData();
              if (parsed && parsed.stats && parsed.grid) {
@@ -130,9 +136,27 @@ function App() {
              }
          } catch (e) {
              console.error("Failed to load save from Yandex Cloud", e);
+         } finally {
+             if (!cancelled) setDataReady(true);
          }
-     });
+     };
+     void loadSave();
+     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (!dataReady || !mapReady) return;
+    let secondFrame = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        void yandexSDK.markGameReady();
+      });
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      if (secondFrame) cancelAnimationFrame(secondFrame);
+    };
+  }, [dataReady, mapReady]);
 
   const [grid, setGrid] = useState<Grid>(createInitialGrid);
   const [stats, setStats] = useState<CityStats>(() => {
@@ -194,13 +218,24 @@ function App() {
   const statsRef = useRef(stats);
   const isResettingRef = useRef(false);
   const gamePausedRef = useRef(false);
+  const menuPausedRef = useRef(false);
+  const platformPausedRef = useRef(false);
   const lastTimeRef = useRef(performance.now());
 
   // Sync refs
   useEffect(() => { gridRef.current = grid; }, [grid]);
   useEffect(() => { statsRef.current = stats; }, [stats]);
 
-  useEffect(() => () => yandexSDK.stopGameplay(), []);
+  useEffect(() => {
+    const unsubscribe = yandexSDK.onPlatformPauseChange((paused) => {
+      platformPausedRef.current = paused;
+      sounds.setPlatformPaused(paused);
+    });
+    return () => {
+      unsubscribe();
+      yandexSDK.stopGameplay();
+    };
+  }, []);
 
   // --- Logic Wrappers ---
 
@@ -210,21 +245,25 @@ function App() {
 
   // --- Load / Save ---
   useEffect(() => {
+    if (!gameStarted || !dataReady || isResettingRef.current) return;
+    void yandexSDK.saveData({ grid, stats });
+  }, [gameStarted, dataReady, grid, stats]);
+
+  useEffect(() => {
     if (!gameStarted) return;
-    const saveGame = () => isResettingRef.current
-      ? Promise.resolve()
-      : yandexSDK.saveData({ grid: gridRef.current, stats: statsRef.current });
-    const saveInterval = setInterval(saveGame, 10000);
-    const saveWhenHidden = () => {
-      if (document.hidden) void saveGame();
+    const flushSave = () => {
+      if (!isResettingRef.current) {
+        void yandexSDK.saveData({ grid: gridRef.current, stats: statsRef.current }, true);
+      }
     };
-    window.addEventListener('pagehide', saveGame);
+    const saveWhenHidden = () => {
+      if (document.hidden) flushSave();
+    };
+    window.addEventListener('pagehide', flushSave);
     document.addEventListener('visibilitychange', saveWhenHidden);
     return () => {
-      clearInterval(saveInterval);
-      window.removeEventListener('pagehide', saveGame);
+      window.removeEventListener('pagehide', flushSave);
       document.removeEventListener('visibilitychange', saveWhenHidden);
-      void saveGame();
     };
   }, [gameStarted]);
 
@@ -232,7 +271,7 @@ function App() {
   useEffect(() => {
     if (!gameStarted) return;
 
-    addNewsItem({ id: Date.now().toString(), text: `Добро пожаловать в ${GAME_TITLE} Строительство разрешено.`, type: 'positive' });
+    addNewsItem({ id: Date.now().toString(), text: t('app_news_welcome', { title: getGameTitle() }), type: 'positive' });
     lastTimeRef.current = performance.now();
   }, [gameStarted, addNewsItem]);
 
@@ -245,7 +284,7 @@ function App() {
 
     const intervalId = setInterval(() => {
       // Пауза, если вкладка не активна (свернута)
-      if (gamePausedRef.current || (typeof document !== 'undefined' && document.hidden)) {
+      if (gamePausedRef.current || menuPausedRef.current || platformPausedRef.current || (typeof document !== 'undefined' && document.hidden)) {
         return;
       }
 
@@ -391,39 +430,40 @@ function App() {
       if (nextMilestone && newPop >= nextMilestone.requiredPop) {
         newLevel = nextMilestone.level;
         gamePausedRef.current = true;
+        yandexSDK.stopGameplay();
         setShowLevelUp(newLevel);
         sounds.playLevelUp();
-        addNewsItem({ id: Date.now().toString(), text: `Уровень повышен! Добро пожаловать: ${nextMilestone.name}`, type: 'positive' });
+        addNewsItem({ id: Date.now().toString(), text: t('app_news_level_name', { name: nextMilestone.name }), type: 'positive' });
       }
 
       // Random Events
       if (Math.random() < 0.05) {
          const events = [];
-         events.push({ text: "Жители наслаждаются прогулками по городу.", type: "neutral" });
+         events.push({ text: t('app_event_walk'), type: "neutral" });
          if (buildingCounts[BuildingType.Road]) {
              if (newPop / buildingCounts[BuildingType.Road] > 20) {
-                 events.push({ text: "На дорогах пробки! Жители жалуются на нехватку транспортных путей.", type: "negative" });
+                 events.push({ text: t('app_event_traffic'), type: "negative" });
              } else {
-                 events.push({ text: "Движение на дорогах свободное.", type: "positive" });
+                 events.push({ text: t('app_event_clear_roads'), type: "positive" });
              }
          }
          if (newPop >= maxPop && maxPop > 0) {
-             events.push({ text: "Не хватает жилых домов! Новым жителям негде жить.", type: "negative" });
+             events.push({ text: t('app_event_housing_shortage'), type: "negative" });
          }
          if (newHappiness >= 80) {
-             events.push({ text: "Мэр, ваш рейтинг на высоте! Парки и благоустройство радуют горожан.", type: "positive" });
+             events.push({ text: t('app_event_happy'), type: "positive" });
          } else if (newHappiness < 40) {
-             let reason = "Жители крайне недовольны качеством жизни.";
-             if (totalHappinessImpact < -10) reason = "Экология в упадке! Счастье падает из-за грязных заводов рядом с домами.";
-             else if (newPop >= maxPop && maxPop > 0) reason = "Жителям не хватает жизненного пространства!";
+             let reason = t('app_event_unhappy');
+             if (totalHappinessImpact < -10) reason = t('app_event_pollution');
+             else if (newPop >= maxPop && maxPop > 0) reason = t('app_event_space');
              events.push({ text: reason, type: "negative" });
          }
          
          if (newHappiness < 30 && prev.happiness >= 30) {
-             addNewsItem({ id: Date.now().toString() + Math.random(), text: "ВНИМАНИЕ: Счастье упало ниже 30%! Люди собирают вещи и уезжают!", type: "negative" });
+             addNewsItem({ id: Date.now().toString() + Math.random(), text: t('app_event_happiness_warning'), type: "negative" });
          }
          if (buildingCounts[BuildingType.FactoryLarge] || buildingCounts[BuildingType.FactorySmall]) {
-            events.push({ text: "Промышленные районы стабильно производят товары.", type: "neutral" });
+            events.push({ text: t('app_event_industry'), type: "neutral" });
          }
 
          if (events.length > 0) {
@@ -439,6 +479,7 @@ function App() {
       const nextDay = prev.day + 1;
       if (nextDay > 1 && nextDay % 120 === 0 && newLevel === prev.level) {
          gamePausedRef.current = true;
+         yandexSDK.stopGameplay();
          setCityReport({
             day: nextDay,
             income: Math.floor(dailyIncome),
@@ -493,7 +534,7 @@ function App() {
      const cost = Math.round(500 * Math.pow(1.35, baseExp));
 
      if (statsRef.current.money < cost) {
-       addNewsItem({id: Date.now().toString(), text: `Недостаточно средств на территорию. Нужно: $${cost}.`, type: 'negative'});
+       addNewsItem({id: Date.now().toString(), text: t('app_land_money', { cost: formatNumber(cost) }), type: 'negative'});
        triggerMoneyError();
        return;
      }
@@ -512,7 +553,7 @@ function App() {
      }
 
      if (!isAdjacent) {
-       addNewsItem({id: Date.now().toString(), text: `Территория должна прилегать к вашим владениям!`, type: 'negative'});
+       addNewsItem({id: Date.now().toString(), text: t('app_land_adjacent'), type: 'negative'});
        return;
      }
 
@@ -528,7 +569,7 @@ function App() {
      setStats(nextStats);
      setGrid(nextGrid);
      sounds.playCoin();
-     addNewsItem({id: Date.now().toString(), text: `Владения расширены (Куплено за $${cost})!`, type: 'positive'});
+     addNewsItem({id: Date.now().toString(), text: t('app_land_bought', { cost: formatNumber(cost) }), type: 'positive'});
   }, [addNewsItem]);
 
   const handleTileClick = useCallback((x: number, y: number, rotation: number = 0) => {
@@ -552,13 +593,13 @@ function App() {
     }
 
     if (!currentTile.unlocked) {
-       addNewsItem({id: Date.now().toString() + Math.random(), text: `Сначала нужно купить эту территорию.`, type: 'neutral'});
+       addNewsItem({id: Date.now().toString() + Math.random(), text: t('app_land_locked'), type: 'neutral'});
        return;
     }
 
     const buildingConfig = BUILDINGS[tool];
     if (buildingConfig && currentStats.level < buildingConfig.minLevel) {
-       addNewsItem({id: Date.now().toString() + Math.random(), text: `Здание доступно с ${buildingConfig.minLevel} уровня.`, type: 'neutral'});
+       addNewsItem({id: Date.now().toString() + Math.random(), text: t('app_build_level', { level: buildingConfig.minLevel }), type: 'neutral'});
        return;
     }
 
@@ -597,7 +638,7 @@ function App() {
             statsRef.current = nextStats;
             setStats(nextStats);
         } else {
-            addNewsItem({id: Date.now().toString(), text: `Снос стоит $${demolishCost}.`, type: 'negative'});
+            addNewsItem({id: Date.now().toString(), text: t('app_demolish_cost', { cost: formatNumber(demolishCost) }), type: 'negative'});
             triggerMoneyError();
         }
       }
@@ -611,7 +652,7 @@ function App() {
 
       // Check boundaries
       if (x + bWidth > GRID_SIZE || y + bHeight > GRID_SIZE) {
-        addNewsItem({id: Date.now().toString() + Math.random(), text: `Здание выходит за пределы карты.`, type: 'negative'});
+        addNewsItem({id: Date.now().toString() + Math.random(), text: t('app_out_of_bounds'), type: 'negative'});
         sounds.playError();
         return;
       }
@@ -619,7 +660,7 @@ function App() {
     // Road 3x3 restriction logic
     if (tool === BuildingType.Road) {
         if (wouldFormRoadBlock(currentGrid, x, y)) {
-            addNewsItem({id: Date.now().toString() + Math.random(), text: `Максимальная ширина дороги - 2 полосы!`, type: 'negative'});
+            addNewsItem({id: Date.now().toString() + Math.random(), text: t('app_road_width'), type: 'negative'});
             return;
         }
     }
@@ -660,11 +701,11 @@ function App() {
         sounds.playBuild();
         setGrid(newGrid);
       } else {
-        addNewsItem({id: Date.now().toString() + Math.random(), text: `В казне недостаточно средств: ${buildingConfig.name}.`, type: 'negative'});
+        addNewsItem({id: Date.now().toString() + Math.random(), text: t('app_build_money', { building: buildingConfig.name }), type: 'negative'});
         triggerMoneyError();
       }
     } else {
-        addNewsItem({id: Date.now().toString() + Math.random(), text: `Место занято или не куплено!`, type: 'negative'});
+        addNewsItem({id: Date.now().toString() + Math.random(), text: t('app_place_invalid'), type: 'negative'});
     }
   }, [selectedTool, addNewsItem, gameStarted, unlockChunk]);
 
@@ -691,16 +732,16 @@ function App() {
              if (rewardStr === 'AD_MONEY') {
                  const adRewardMoney = Math.round(1000 * Math.pow(2.2, statsRef.current.level - 1));
                  setStats(prev => ({...prev, money: prev.money + adRewardMoney}));
-                 addNewsItem({id: Date.now().toString(), text: `Получен грант! В казну добавлено: $${adRewardMoney.toLocaleString()}`, type: 'positive'});
+                 addNewsItem({id: Date.now().toString(), text: t('app_news_grant', { amount: formatNumber(adRewardMoney) }), type: 'positive'});
              } else if (rewardStr === 'TAX_BOOST') {
-                 addNewsItem({id: Date.now().toString(), text: "Активирована Золотая Лихорадка! Доход удвоен!", type: 'positive'});
+                 addNewsItem({id: Date.now().toString(), text: t('app_news_gold_rush_start'), type: 'positive'});
                   setStats(prev => ({...prev, taxBoostExpiresAt: Date.now() + 180000}));
                   setTimeout(() => {
-                     addNewsItem({id: Date.now().toString(), text: "Золотая Лихорадка закончилась.", type: 'neutral'});
+                     addNewsItem({id: Date.now().toString(), text: t('app_news_gold_rush_end'), type: 'neutral'});
                   }, 180000); // 3 minutes
              } else if (rewardStr === 'TAX_PERM_BOOST') {
                   setStats(prev => ({...prev, upgrades: {...prev.upgrades, taxBoost: Math.min(1, prev.upgrades.taxBoost + 0.1)}}));
-                 addNewsItem({id: Date.now().toString(), text: "Налоги успешно повышены на 10% навсегда!", type: 'positive'});
+                 addNewsItem({id: Date.now().toString(), text: t('app_news_tax_up'), type: 'positive'});
              }
          },
          // onOpen
@@ -713,15 +754,24 @@ function App() {
              yandexSDK.startGameplay();
          },
          // onError
-         (e) => {
+         () => {
              const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
              sounds.setBgmVolume(vol / 100);
              gamePausedRef.current = false;
              yandexSDK.startGameplay();
-             addNewsItem({id: Date.now().toString(), text: "Ошибка загрузки рекламы. Попробуйте позже.", type: 'negative'});
+             addNewsItem({id: Date.now().toString(), text: t('app_ad_error'), type: 'negative'});
          }
      );
   };
+
+  const handleMenuPauseChange = useCallback((paused: boolean) => {
+    menuPausedRef.current = paused;
+    if (paused) {
+      yandexSDK.stopGameplay();
+    } else if (gameStarted && !gamePausedRef.current && !platformPausedRef.current) {
+      yandexSDK.startGameplay();
+    }
+  }, [gameStarted]);
 
   return (
     <ErrorBoundary>
@@ -734,10 +784,19 @@ function App() {
         stats={stats}
         floatingTexts={floatingTexts}
         isNightMode={isNightMode}
+        onReady={() => setMapReady(true)}
       />
       
       {/* Start Screen Overlay */}
-      {!gameStarted && (
+      {!dataReady && (
+        <div className="absolute inset-0 z-50 grid place-items-center bg-slate-950/70 backdrop-blur-sm pointer-events-auto" role="status">
+          <div className="flex flex-col items-center gap-4 text-white font-bold">
+            <div className="h-12 w-12 rounded-full border-4 border-white/20 border-t-cyan-300 animate-spin" aria-hidden="true" />
+            <span>{t('app_loading')}</span>
+          </div>
+        </div>
+      )}
+      {dataReady && !gameStarted && (
         <StartScreen onStart={handleStart} />
       )}
 
@@ -766,14 +825,15 @@ function App() {
                 safeRemoveItem('polycity_tutorial_completed');
                 window.location.reload();
              }}
+             onPauseChange={handleMenuPauseChange}
            />
           {showLevelUp && (
              <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto">
                <div className="bg-sky-900 border-2 border-cyan-400 p-8 rounded-2xl shadow-2xl text-center max-w-md w-full mx-4">
-                 <h2 className="text-4xl justify-center font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 mb-2 drop-shadow-md">Новый Уровень!</h2>
+                 <h2 className="text-4xl justify-center font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 mb-2 drop-shadow-md">{t('app_level_title')}</h2>
                  <div className="text-6xl my-4">🎉</div>
-                 <p className="text-white text-xl font-bold mb-1">Вы достигли {showLevelUp} уровня!</p>
-                 <p className="text-cyan-200 text-sm mb-6">Продолжайте строить, чтобы открыть еще больше зданий.</p>
+                 <p className="text-white text-xl font-bold mb-1">{t('app_level_reached', { level: showLevelUp })}</p>
+                 <p className="text-cyan-200 text-sm mb-6">{t('app_level_more')}</p>
                  <button onClick={() => {
                      const vol = parseInt(safeGetItem('polycity_bgm_vol') || '50', 10);
                      sounds.setBgmVolume(0);
@@ -784,7 +844,7 @@ function App() {
                          gamePausedRef.current = false;
                          yandexSDK.startGameplay();
                      });
-                  }} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">Продолжить</button>
+                  }} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">{t('app_lvl_up_btn')}</button>
                </div>
              </div>
           )}
@@ -792,16 +852,16 @@ function App() {
              <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto p-4">
                <div className="bg-slate-900 border-2 border-indigo-400 p-5 sm:p-7 rounded-2xl shadow-2xl text-center max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto">
                  <div className="text-4xl sm:text-5xl mb-3" aria-hidden="true">🏙️</div>
-                 <h2 className="text-2xl sm:text-3xl font-black text-white mb-2">Отчёт города</h2>
-                 <p className="text-indigo-200 text-sm mb-5">День {cityReport.day}. Совет города подвёл промежуточные итоги.</p>
+                 <h2 className="text-2xl sm:text-3xl font-black text-white mb-2">{t('app_report_title')}</h2>
+                 <p className="text-indigo-200 text-sm mb-5">{t('app_report_summary', { day: cityReport.day })}</p>
                  <div className="grid grid-cols-2 gap-3 mb-6 text-left">
                    <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-                     <span className="block text-[10px] uppercase tracking-wider text-slate-400">Население</span>
-                     <strong className="text-lg text-cyan-300">{cityReport.population.toLocaleString()}</strong>
+                     <span className="block text-[10px] uppercase tracking-wider text-slate-400">{t('app_report_population')}</span>
+                     <strong className="text-lg text-cyan-300">{formatNumber(cityReport.population)}</strong>
                    </div>
                    <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-                     <span className="block text-[10px] uppercase tracking-wider text-slate-400">Доход за день</span>
-                     <strong className="text-lg text-green-400">+${cityReport.income.toLocaleString()}</strong>
+                     <span className="block text-[10px] uppercase tracking-wider text-slate-400">{t('app_report_income')}</span>
+                     <strong className="text-lg text-green-400">+${formatNumber(cityReport.income)}</strong>
                    </div>
                  </div>
                  <button onClick={() => {
@@ -814,7 +874,7 @@ function App() {
                          gamePausedRef.current = false;
                          yandexSDK.startGameplay();
                      });
-                  }} className="w-full min-h-12 bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">Продолжить</button>
+                  }} className="w-full min-h-12 bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-white font-bold py-3 rounded-xl shadow-lg transition-transform active:scale-95">{t('app_lvl_up_btn')}</button>
                </div>
              </div>
           )}

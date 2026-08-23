@@ -13,7 +13,41 @@ class YandexSDKWrapper {
     private initialized = false;
     private initPromise: Promise<void> | null = null;
     private gameplayRequested = false;
-    private visibilityListenerBound = false;
+    private gameplayStartPending = false;
+    private platformPaused = false;
+    private platformEventListenersBound = false;
+    private platformPauseListeners = new Set<(paused: boolean) => void>();
+    private gameReadyReported = false;
+    private pendingCloudSave: any = null;
+    private cloudSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+    private notifyPlatformPause(paused: boolean) {
+        this.platformPaused = paused;
+        for (const listener of this.platformPauseListeners) {
+            try {
+                listener(paused);
+            } catch (e) {
+                console.error('Platform pause listener failed:', e);
+            }
+        }
+        if (!paused && this.gameplayStartPending && this.gameplayRequested && !document.hidden) {
+            this.gameplayStartPending = false;
+            this.applyGameplayState(true);
+        }
+    }
+
+    private bindPlatformEvents() {
+        if (this.platformEventListenersBound || typeof this.ysdk?.on !== 'function') return;
+        this.ysdk.on('game_api_pause', () => this.notifyPlatformPause(true));
+        this.ysdk.on('game_api_resume', () => this.notifyPlatformPause(false));
+        this.platformEventListenersBound = true;
+    }
+
+    onPlatformPauseChange(listener: (paused: boolean) => void): () => void {
+        this.platformPauseListeners.add(listener);
+        listener(this.platformPaused);
+        return () => this.platformPauseListeners.delete(listener);
+    }
 
     private applyGameplayState(active: boolean) {
         const gameplayAPI = this.ysdk?.features?.GameplayAPI;
@@ -28,13 +62,17 @@ class YandexSDKWrapper {
 
     startGameplay() {
         this.gameplayRequested = true;
-        if (typeof document === 'undefined' || !document.hidden) {
+        if (!this.platformPaused && (typeof document === 'undefined' || !document.hidden)) {
+            this.gameplayStartPending = false;
             this.applyGameplayState(true);
+        } else {
+            this.gameplayStartPending = true;
         }
     }
 
     stopGameplay() {
         this.gameplayRequested = false;
+        this.gameplayStartPending = false;
         this.applyGameplayState(false);
     }
 
@@ -48,7 +86,9 @@ class YandexSDKWrapper {
                 return;
             }
             const script = document.createElement('script');
-            script.src = 'https://yandex.ru/games/sdk/v2';
+            // Games uploaded as an archive must use the platform-proxied SDK path.
+            // See: https://yandex.ru/dev/games/doc/ru/sdk/sdk-about#install
+            script.src = '/sdk.js';
             script.async = true;
             script.dataset.yandexGamesSdk = 'true';
             script.onload = () => resolve();
@@ -96,22 +136,12 @@ class YandexSDKWrapper {
                 window.ysdk = this.ysdk; // expose globally if needed
                 this.initialized = true;
                 console.log('Yandex Games SDK initialized');
+                this.bindPlatformEvents();
                 
                 if (!urlLang && this.ysdk.environment && this.ysdk.environment.i18n) {
                     setLang(this.ysdk.environment.i18n.lang);
                 }
-                if (this.ysdk.features && this.ysdk.features.LoadingAPI) {
-                    this.ysdk.features.LoadingAPI.ready();
-                    console.log('Yandex LoadingAPI ready called');
-                }
-                if (!this.visibilityListenerBound) {
-                    document.addEventListener('visibilitychange', () => {
-                        if (document.hidden) this.applyGameplayState(false);
-                        else if (this.gameplayRequested) this.applyGameplayState(true);
-                    });
-                    this.visibilityListenerBound = true;
-                }
-                if (this.gameplayRequested && !document.hidden) {
+                if (this.gameplayRequested && !this.platformPaused && !document.hidden) {
                     this.applyGameplayState(true);
                 }
                 try {
@@ -125,6 +155,24 @@ class YandexSDKWrapper {
             }
         } catch (e) {
             console.error('Failed to initialize Yandex Games SDK:', e);
+        }
+    }
+
+    async markGameReady(): Promise<void> {
+        if (this.gameReadyReported || !this.initialized || !this.ysdk) return;
+
+        const loadingAPI = this.ysdk.features?.LoadingAPI;
+        if (!loadingAPI?.ready) {
+            console.warn('Yandex LoadingAPI is unavailable.');
+            return;
+        }
+
+        try {
+            await Promise.resolve(loadingAPI.ready());
+            this.gameReadyReported = true;
+            console.log('Yandex LoadingAPI ready called after the game became interactive');
+        } catch (e) {
+            console.error('Failed to report Yandex Game Ready:', e);
         }
     }
 
@@ -146,46 +194,89 @@ class YandexSDKWrapper {
                 },
                 onError: (error: any) => {
                     console.error('Error while opening fullscreen ad:', error);
-                    if (onClose) onClose(false);
                 }
             }
         });
     }
 
-    async saveData(data: any): Promise<void> {
-        if (this.player) {
-            try {
-                await this.player.setData(data);
-                console.log('Data saved to Yandex Cloud');
-            } catch (e) {
-                console.error('Failed to save to Yandex Cloud', e);
-                safeSetItem('polycity_save', JSON.stringify(data));
+    private async persistPendingCloudSave(flush: boolean): Promise<void> {
+        if (!this.player || !this.pendingCloudSave) return;
+        const data = this.pendingCloudSave;
+        this.pendingCloudSave = null;
+        try {
+            await this.player.setData(data, flush);
+            console.log('Data saved to Yandex Cloud');
+        } catch (e) {
+            console.error('Failed to save to Yandex Cloud', e);
+            // Preserve the newest unsaved state for the next attempt.
+            if (!this.pendingCloudSave || (this.pendingCloudSave.__savedAt ?? 0) < data.__savedAt) {
+                this.pendingCloudSave = data;
             }
-        } else {
-            safeSetItem('polycity_save', JSON.stringify(data));
+        }
+    }
+
+    async saveData(data: any, flush = false): Promise<void> {
+        const stampedData = { ...data, __savedAt: Date.now() };
+        // Local persistence is synchronous, so an immediate reload cannot lose the last action.
+        safeSetItem('polycity_save', JSON.stringify(stampedData));
+
+        if (!this.player) return;
+        this.pendingCloudSave = stampedData;
+
+        if (flush) {
+            if (this.cloudSaveTimer) {
+                clearTimeout(this.cloudSaveTimer);
+                this.cloudSaveTimer = null;
+            }
+            await this.persistPendingCloudSave(true);
+            return;
+        }
+
+        // Coalesce rapid simulation changes and remain below the SDK limit of 100 calls per 5 minutes.
+        if (!this.cloudSaveTimer) {
+            this.cloudSaveTimer = setTimeout(() => {
+                this.cloudSaveTimer = null;
+                void this.persistPendingCloudSave(false);
+            }, 4000);
         }
     }
 
     async loadData(): Promise<any> {
+        let localData: any = null;
+        const local = safeGetItem('polycity_save');
+        if (local) {
+            try {
+                localData = JSON.parse(local);
+            } catch (e) {
+                console.warn('Failed to parse local save:', e);
+            }
+        }
+
         if (this.player) {
             try {
-                const data = await this.player.getData();
-                if (data && Object.keys(data).length > 0) {
-                    return data;
+                const cloudData = await this.player.getData();
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    const cloudTimestamp = cloudData.__savedAt ?? 0;
+                    const localTimestamp = localData?.__savedAt ?? 0;
+                    return localData && localTimestamp > cloudTimestamp ? localData : cloudData;
                 }
             } catch (e) {
                 console.error('Failed to load from Yandex Cloud', e);
             }
         }
-        const local = safeGetItem('polycity_save');
-        return local ? JSON.parse(local) : null;
+        return localData;
     }
 
     async clearData(): Promise<void> {
+        if (this.cloudSaveTimer) {
+            clearTimeout(this.cloudSaveTimer);
+            this.cloudSaveTimer = null;
+        }
+        this.pendingCloudSave = null;
         safeRemoveItem('polycity_save');
         if (!this.player) return;
         try {
-            await this.player.setData({});
+            await this.player.setData({}, true);
         } catch (e) {
             console.error('Failed to clear Yandex Cloud save', e);
         }
@@ -237,8 +328,6 @@ class YandexSDKWrapper {
                     }
 
                     if (onError) onError(e);
-                    // Если ошибка, мы можем закрыть диалог или вызвать onClose
-                    if (onClose) onClose();
                 }
             }
         });

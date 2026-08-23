@@ -4,10 +4,10 @@
 */
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree, ThreeElements } from '@react-three/fiber';
-import { MapControls, Environment, SoftShadows, Instance, Instances, Float, useTexture, Outlines, OrthographicCamera, Html, Grid as DreiGrid } from '@react-three/drei';
+import { MapControls, Float, Outlines, OrthographicCamera, Html, Grid as DreiGrid } from '@react-three/drei';
 import * as THREE from 'three';
 import { MathUtils } from 'three';
-import { Grid, BuildingType, TileData, CityStats, BuildingCategory, FloatingTextData } from '../types';
+import { Grid, BuildingType, CityStats, FloatingTextData } from '../types';
 import { GRID_SIZE, CHUNK_SIZE, BUILDINGS } from '../constants';
 import { getRoadBitmask, getBoulevardBonds, ROAD_N, ROAD_E, ROAD_S, ROAD_W } from '../roadUtils';
 
@@ -52,7 +52,7 @@ const WindowBlock = React.memo(({ position, scale }: { position: [number, number
 
 const SmokeStack = ({ position }: { position: [number, number, number] }) => {
   const ref = useRef<THREE.Group>(null);
-  useFrame((state) => {
+  useFrame(() => {
     if (ref.current) {
       ref.current.children.forEach((child, i) => {
         const cloud = child as THREE.Mesh;
@@ -99,9 +99,6 @@ interface BuildingMeshProps {
 }
 
 const ProceduralBuilding = React.memo(({ type, baseColor, x, y, opacity = 1, transparent = false, rotation = 0 }: BuildingMeshProps) => {
-  const hash = getHash(x, y);
-  const variant = Math.floor(hash * 100); // 0-99
-  
   // No random color variation or rotation, ensure predictability for player
   const colorStr = baseColor;
 
@@ -1872,7 +1869,7 @@ const PopulationSystem = ({ population, grid }: { population: number, grid: Grid
 // Clouds & Birds
 const Cloud = ({ position, scale, speed }: { position: [number, number, number], scale: number, speed: number }) => {
     const group = useRef<THREE.Group>(null);
-    useFrame((state, delta) => {
+    useFrame((_, delta) => {
         if (group.current) {
             group.current.position.x += speed * delta;
             if (group.current.position.x > GRID_SIZE * 1.5) group.current.position.x = -GRID_SIZE * 1.5;
@@ -2478,6 +2475,7 @@ interface IsoMapProps {
   stats: CityStats;
   floatingTexts?: FloatingTextData[];
   isNightMode?: boolean;
+  onReady?: () => void;
 }
 
 const FloatingLabels = ({ texts }: { texts: FloatingTextData[] }) => {
@@ -2499,7 +2497,7 @@ const FloatingLabels = ({ texts }: { texts: FloatingTextData[] }) => {
   );
 }
 
-const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, floatingTexts = [], isNightMode = false }) => {
+const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, floatingTexts = [], isNightMode = false, onReady }) => {
   const [hoveredTile, setHoveredTile] = useState<{x: number, y: number, rotation: number} | null>(null);
   const pointerDownPos = useRef<{x: number, y: number} | null>(null);
   const activePointers = useRef(new Set<number>());
@@ -2580,7 +2578,7 @@ const IsoMap: React.FC<IsoMapProps> = ({ grid, onTileClick, hoveredTool, stats, 
 
   return (
     <div className="absolute inset-0 bg-[#10b981] touch-none" onWheelCapture={handleTrackpadWheel}>
-      <Canvas shadows={false} dpr={[1, 1]} gl={{ antialias: false, powerPreference: "high-performance" }}>
+      <Canvas shadows={false} dpr={[1, 1]} gl={{ antialias: false, powerPreference: "high-performance" }} onCreated={onReady}>
         <OrthographicCamera makeDefault zoom={25} position={[40, 40, 40]} near={-1000} far={1000} />
         
         <MapControls 

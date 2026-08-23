@@ -10,7 +10,7 @@ import { MISSIONS } from '../missions';
 import { sounds } from './soundEngine';
 import { TutorialManager, TUTORIAL_STEPS } from './TutorialManager';
 import { safeGetItem, safeSetItem, safeRemoveItem } from './storage';
-import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, Check, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut, Gift, BookOpen, MousePointer2, Laptop, Smartphone } from 'lucide-react';
+import { Maximize2, Minimize2, X, AlertCircle, ShoppingBag, Tv, Zap, ChevronUp, ChevronDown, Settings, Home, Building2, Factory, Store, TreePine, Map, Trash2, Target, RotateCcw, RotateCw, ZoomIn, ZoomOut, Gift, BookOpen, MousePointer2, Laptop, Smartphone } from 'lucide-react';
 import { t } from '../i18n';
 
 interface UIOverlayProps {
@@ -24,16 +24,17 @@ interface UIOverlayProps {
   isNightMode?: boolean;
   onToggleNightMode?: () => void;
   onResetProgress?: () => Promise<void> | void;
+  onPauseChange?: (paused: boolean) => void;
   canUndo?: boolean;
   onUndo?: () => void;
 }
 
 const CATEGORIES = [
-  { id: BuildingCategory.Infrastructure, name: 'Дороги и Земля' },
-  { id: BuildingCategory.Residential, name: 'Жилье' },
-  { id: BuildingCategory.Commercial, name: 'Коммерция' },
-  { id: BuildingCategory.Industrial, name: 'Промышленность' },
-  { id: BuildingCategory.Decorations, name: 'Благоустройство' }
+  { id: BuildingCategory.Infrastructure, get name() { return t('c_infra'); } },
+  { id: BuildingCategory.Residential, get name() { return t('c_res'); } },
+  { id: BuildingCategory.Commercial, get name() { return t('c_com'); } },
+  { id: BuildingCategory.Industrial, get name() { return t('c_ind'); } },
+  { id: BuildingCategory.Decorations, get name() { return t('c_dec'); } }
 ];
 
 const ToolButton: React.FC<{
@@ -56,7 +57,7 @@ const ToolButton: React.FC<{
 
   const handleClick = () => {
     if (isLocked) {
-      setToastMsg(`Доступно на ${config.minLevel} уровне`);
+      setToastMsg(t('app_err_level', { level: config.minLevel }));
       return;
     }
     onClick();
@@ -82,7 +83,7 @@ const ToolButton: React.FC<{
         ${isSelected ? 'bg-indigo-600/30 border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.5)] -translate-y-1' : 'border-transparent bg-gray-800/80 hover:bg-gray-700/80 hover:-translate-y-0.5'}
         ${isLocked ? 'opacity-40 grayscale pointer-events-none' : ''} ${extraClass || ''}
       `}
-      title={isLocked ? `Заблокировано до ур. ${config.minLevel}` : config.description}
+      title={isLocked ? t('ui_locked', { level: config.minLevel }) : config.description}
     >
       <div className="w-8 h-8 rounded-full mb-1 flex items-center justify-center shadow-inner short-screen-icon-container" style={{ backgroundColor: isBulldoze ? '#ef4444' : bgColor }}>
         {getIcon()}
@@ -113,6 +114,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
   isNightMode = false,
   onToggleNightMode,
   onResetProgress,
+  onPauseChange,
   canUndo,
   onUndo }) => {
   const newsRef = useRef<HTMLDivElement>(null);
@@ -196,6 +198,13 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
 
   const tutorialStep = stats.tutorialStep || 0;
   const currentTutorial = TutorialManager.getStep(tutorialStep);
+  const blockingOverlayVisible = upgradesVisible || settingsVisible || controlsGuideVisible || Boolean(currentTutorial && selectedTool === null);
+
+  useEffect(() => {
+    onPauseChange?.(blockingOverlayVisible);
+  }, [blockingOverlayVisible, onPauseChange]);
+
+  useEffect(() => () => onPauseChange?.(false), [onPauseChange]);
 
   const getHighlightClass = (area: string) => {
     if (currentTutorial) {
@@ -239,10 +248,6 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
      setStats(prev => ({ ...prev, tutorialStep: (prev.tutorialStep || 0) + 1 }));
   };
 
-  const prevTutorialStep = () => {
-     setStats(prev => ({ ...prev, tutorialStep: Math.max(1, (prev.tutorialStep || 0) - 1) }));
-  };
-
   const handleRotate = (dir: 1 | -1) => {
     window.dispatchEvent(new CustomEvent('rotateCamera', { detail: { dir } }));
   };
@@ -263,18 +268,6 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
        window.removeEventListener('trigger-ad-popup', handleTriggerAd);
     };
   }, [adPopupVisible, upgradesVisible, settingsVisible]);
-
-  const performUpgrade = (type: 'tax' | 'road' | 'park', cost: number) => {
-    if (stats.money >= cost) {
-       setStats(prev => {
-          let ups = {...prev.upgrades};
-          if (type==='tax') ups.taxBoost += 0.1;
-          if (type==='road') ups.roadDiscount += 0.2;
-          if (type==='park') ups.parkBoost += 5;
-          return { ...prev, money: prev.money - cost, upgrades: ups };
-       });
-    }
-  };
 
   useEffect(() => {
     if (newsRef.current) {
@@ -324,28 +317,28 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       <div className="hud-stack absolute top-2 left-2 md:top-4 md:left-4 pointer-events-none flex flex-col gap-2 z-auto w-[min(30rem,calc(100vw-4.75rem))] short-screen-stats-container">
         <div className={`relative ${getHighlightClass('stats')} bg-gray-900/95 text-white p-1.5 md:p-3 rounded-xl border border-gray-700 shadow-xl backdrop-blur-md flex gap-2 md:gap-6 items-center w-full md:w-auto overflow-hidden`}>
           <div className={`flex flex-col ${moneyError ? 'animate-money-error' : ''} relative px-1`}>
-            <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">Казна</span>
+             <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">{t('ui_treasury')}</span>
             <span className={`text-base md:text-2xl font-black font-mono drop-shadow-md transition-colors ${moneyError ? 'text-red-500' : 'text-green-400'} leading-tight`}>${Math.floor(stats.money).toLocaleString()}</span>
-            <span className="absolute -bottom-2 md:-bottom-3 left-1 text-[8px] md:text-[9px] font-black text-green-500">+${dailyIncome.toLocaleString()}/д</span>
+             <span className="absolute -bottom-2 md:-bottom-3 left-1 text-[8px] md:text-[9px] font-black text-green-500">+${dailyIncome.toLocaleString()}{t('ui_day_short')}</span>
           </div>
           <div className="w-px h-5 md:h-8 bg-gray-700"></div>
           <div className="flex flex-col relative min-w-[70px]">
-            <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">{currentMilestone?.name || 'Город'} (Ур. {stats.level})</span>
+             <span className="text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest">{currentMilestone?.name || t('m_lvl4')} ({t('ui_level_short')} {stats.level})</span>
             <span className="text-sm md:text-xl font-bold text-blue-300 font-mono drop-shadow-md leading-tight">{stats.population.toLocaleString()}</span>
             {nextMilestone && (
-              <div className="w-full h-1 bg-gray-700 mt-0.5 rounded-full overflow-hidden absolute -bottom-1 md:-bottom-2" title={`До следующего уровня: ${stats.population} / ${nextMilestone.requiredPop}`}>
+               <div className="w-full h-1 bg-gray-700 mt-0.5 rounded-full overflow-hidden absolute -bottom-1 md:-bottom-2" title={t('ui_next_level', { current: stats.population, target: nextMilestone.requiredPop })}>
                 <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${levelProgress}%` }}></div>
               </div>
             )}
           </div>
           <div className="w-px h-5 md:h-8 bg-gray-700"></div>
           <div className="flex flex-col items-center">
-             <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">Счастье</span>
+              <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">{t('ui_happiness')}</span>
              <span className={`text-sm md:text-lg font-bold font-mono leading-tight ${stats.happiness > 70 ? 'text-green-400' : stats.happiness < 40 ? 'text-red-400' : 'text-yellow-400'}`}>{Math.floor(stats.happiness)}%</span>
           </div>
           <div className="w-px h-5 md:h-8 bg-gray-700"></div>
           <div className="flex flex-col items-end px-1">
-             <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">День</span>
+              <span className="text-[7px] md:text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">{t('ui_day')}</span>
              <span className="text-sm md:text-lg font-bold text-white font-mono leading-tight">{stats.day}</span>
           </div>
         </div>
@@ -357,8 +350,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                onPointerDown={(e) => { e.stopPropagation(); setMissionsExpanded(!missionsExpanded); }}
             >
                <Target size={14} className="text-indigo-400"/>
-               {missionsExpanded && <span className="text-xs font-bold uppercase tracking-wider flex-1">Миссия</span>}
-               {!missionsExpanded && <span className="text-[10px] font-bold text-indigo-300">Миссия</span>}
+               {missionsExpanded && <span className="text-xs font-bold uppercase tracking-wider flex-1">{t('ui_mission')}</span>}
+               {!missionsExpanded && <span className="text-[10px] font-bold text-indigo-300">{t('ui_mission')}</span>}
                {missionsExpanded && (
                   <div className="p-0.5 hover:bg-gray-700 rounded"><ChevronUp size={12} className="text-gray-400" /></div>
                )}
@@ -368,7 +361,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                if (missionIdx >= MISSIONS.length) {
                   return (
                      <div className="text-[10px] text-gray-400 italic py-1 text-center">
-                        🎉 Все миссии выполнены! Вы великий мэр!
+                         🎉 {t('ui_missions_complete')}
                      </div>
                   );
                }
@@ -393,7 +386,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                      </div>
 
                      <div className="flex justify-between items-center pt-1.5 mt-1 border-t border-gray-800">
-                        <span className="text-green-400 font-bold font-mono">Награда: {currentMission.rewardText}</span>
+                        <span className="text-green-400 font-bold font-mono">{t('ui_reward')}: {currentMission.rewardText}</span>
                         {isCompleted ? (
                            <button 
                               onPointerDown={(e) => {
@@ -404,15 +397,15 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                                     money: prev.money + currentMission.rewardValue,
                                     currentMissionIndex: (prev.currentMissionIndex ?? 0) + 1
                                  }));
-                                 setToastMsg(`Миссия выполнена! Получено ${currentMission.rewardText}`);
+                                 setToastMsg(t('ui_mission_claimed', { reward: currentMission.rewardText }));
                               }}
                               className="bg-green-500 hover:bg-green-450 text-white font-extrabold px-2.5 py-1 rounded-lg text-[9px] transition-all active:scale-95 shadow-md shadow-green-950/50 cursor-pointer uppercase tracking-wider"
                            >
-                              Забрать
+                              {t('ui_claim')}
                            </button>
                         ) : (
                            <span className="text-gray-500 font-bold uppercase tracking-wider text-[8px] flex items-center gap-1 select-none">
-                              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span> Выполняется
+                              <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span> {t('ui_in_progress')}
                            </span>
                         )}
                      </div>
@@ -425,13 +418,13 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
            <button 
              onPointerDown={(e) => { e.stopPropagation(); setUpgradesVisible(true); }}
              className="min-h-11 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white font-black p-2 md:py-2 md:px-4 rounded-xl shadow-[0_0_15px_rgba(234,179,8,0.5)] flex items-center justify-center gap-2 border border-yellow-300/50 transition-transform active:scale-95 text-xs animate-[pulse_2s_ease-in-out_infinite]"
-             title="Получить Бонус"
+             title={t('ui_bonus')}
            >
-             <Gift size={16} className="text-white drop-shadow-md" /> <span className="hidden md:inline">Получить Бонус</span>
+             <Gift size={16} className="text-white drop-shadow-md" /> <span className="hidden md:inline">{t('ui_bonus')}</span>
            </button>
            {!newsVisible && (
-            <button onPointerDown={(e) => { e.stopPropagation(); setNewsVisible(true); }} title="Новости" className="min-h-11 bg-gray-800 hover:bg-gray-700 text-white text-xs p-2 md:px-3 md:py-1.5 rounded-xl md:rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
-              <AlertCircle size={14} /> <span className="hidden md:inline">Открыть Новости</span>
+            <button onPointerDown={(e) => { e.stopPropagation(); setNewsVisible(true); }} title={t('ui_news')} className="min-h-11 bg-gray-800 hover:bg-gray-700 text-white text-xs p-2 md:px-3 md:py-1.5 rounded-xl md:rounded-full shadow-lg flex items-center gap-1 border border-gray-600 transition-colors">
+              <AlertCircle size={14} /> <span className="hidden md:inline">{t('ui_open_news')}</span>
             </button>
           )}
         </div>
@@ -441,20 +434,20 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       <div className="camera-controls absolute top-[46%] -translate-y-1/2 w-full px-1.5 md:px-6 pointer-events-none flex justify-between z-30">
         {/* Left Side: Rotation */}
         <div className="camera-control-group flex flex-col gap-2 md:gap-4">
-            <button aria-label="Повернуть камеру влево" onPointerDown={(e) => { e.stopPropagation(); handleRotate(1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+            <button aria-label={t('ui_rotate_left')} onPointerDown={(e) => { e.stopPropagation(); handleRotate(1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
                <RotateCcw className="w-5 h-5 md:w-6 md:h-6" />
             </button>
-            <button aria-label="Повернуть камеру вправо" onPointerDown={(e) => { e.stopPropagation(); handleRotate(-1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+            <button aria-label={t('ui_rotate_right')} onPointerDown={(e) => { e.stopPropagation(); handleRotate(-1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
                <RotateCw className="w-5 h-5 md:w-6 md:h-6" />
             </button>
         </div>
         
         {/* Right Side: Zoom */}
         <div className="camera-control-group flex flex-col gap-2 md:gap-4">
-            <button aria-label="Приблизить" onPointerDown={(e) => { e.stopPropagation(); handleZoom(1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+            <button aria-label={t('ui_zoom_in')} onPointerDown={(e) => { e.stopPropagation(); handleZoom(1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
                <ZoomIn className="w-5 h-5 md:w-6 md:h-6" />
             </button>
-            <button aria-label="Отдалить" onPointerDown={(e) => { e.stopPropagation(); handleZoom(-1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
+            <button aria-label={t('ui_zoom_out')} onPointerDown={(e) => { e.stopPropagation(); handleZoom(-1); }} className="camera-control-button pointer-events-auto bg-black/40 hover:bg-black/60 text-white/80 hover:text-white p-2 md:p-4 rounded-full backdrop-blur-md border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] active:scale-90 touch-manipulation">
                <ZoomOut className="w-5 h-5 md:w-6 md:h-6" />
             </button>
         </div>
@@ -467,7 +460,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
              
              {/* Skip button */}
              <button onPointerDown={(e) => { e.stopPropagation(); completeTutorial(); }} className="absolute top-2 right-2 text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[10px] bg-slate-800 px-2 py-1 rounded-full border border-slate-700">
-               <X size={12} /> ПРОПУСТИТЬ
+               <X size={12} /> {t('tut_skip')}
              </button>
 
              <div className="mb-2 mt-6 flex justify-center short-screen-hide">
@@ -483,11 +476,11 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
              <div className="flex gap-2 w-full justify-center">
                {!currentTutorial.actionRequired ? (
                  <button onPointerDown={(e) => { e.stopPropagation(); if(tutorialStep === TUTORIAL_STEPS.length) completeTutorial(); else nextTutorialStep(); }} className="w-full bg-gradient-to-b from-green-400 to-green-600 hover:from-green-300 hover:to-green-500 text-white font-black py-3 rounded-xl text-sm shadow-[0_4px_0_rgb(21,128,61)] transition-all active:scale-95 active:translate-y-1">
-                   {tutorialStep === TUTORIAL_STEPS.length ? 'ИГРАТЬ!' : 'ПОНЯТНО'}
+                   {tutorialStep === TUTORIAL_STEPS.length ? t('tut_play') : t('tut_got_it')}
                  </button>
                ) : (
                  <div className="text-yellow-400 font-bold text-xs animate-pulse flex items-center gap-2">
-                   <Zap size={14} /> ВЫПОЛНИТЕ ДЕЙСТВИЕ...
+                   <Zap size={14} /> {t('tut_action_req')}
                  </div>
                )}
              </div>
@@ -507,50 +500,50 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         <div className="absolute inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto overflow-y-auto p-4">
           <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-2">
-               <h2 className="text-2xl font-black text-white flex items-center gap-2"><ShoppingBag className="text-purple-400"/> Исследования и Бусты</h2>
-               <button onClick={() => setUpgradesVisible(false)} className="text-slate-400 hover:text-white"><X /></button>
+               <h2 className="text-2xl font-black text-white flex items-center gap-2"><ShoppingBag className="text-purple-400"/> {t('ui_upgrades')}</h2>
+               <button onClick={() => setUpgradesVisible(false)} aria-label={t('ui_close')} className="text-slate-400 hover:text-white"><X /></button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-blue-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white flex items-center gap-1"><Tv size={10} /> Реклама</div>
+                  <div className="absolute top-0 right-0 bg-blue-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white flex items-center gap-1"><Tv size={10} /> {t('ui_ad')}</div>
                   <div className="flex items-center gap-3 relative z-10">
                      <div className="bg-black/30 p-2 rounded-lg"><ShoppingBag className="text-blue-400" size={24} /></div>
                      <div>
-                       <h3 className="font-bold text-white text-sm">Налоги +10%</h3>
-                       <p className="text-xs text-slate-400">Доход от всех зданий увеличивается навсегда.</p>
+                       <h3 className="font-bold text-white text-sm">{t('ui_tax_boost_name')}</h3>
+                       <p className="text-xs text-slate-400">{t('ui_tax_boost_desc')}</p>
                      </div>
                   </div>
                   <button onClick={() => { onAdReward('TAX_PERM_BOOST'); setUpgradesVisible(false); }} disabled={stats.upgrades.taxBoost >= 1} className="mt-4 bg-blue-600 hover:bg-blue-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-blue-900/50 disabled:opacity-50 flex items-center justify-center gap-1">
-                    <Tv size={12} /> {stats.upgrades.taxBoost >= 1 ? 'Максимум' : 'Смотреть рекламу — Получить +10%'}
+                     <Tv size={12} /> {stats.upgrades.taxBoost >= 1 ? t('ui_max_boost') : t('ui_watch_get_boost')}
                   </button>
                </div>
                
                <div className="bg-slate-800/80 p-4 rounded-xl border border-green-700/50 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 bg-green-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white flex items-center gap-1"><Tv size={10} /> Реклама</div>
+                  <div className="absolute top-0 right-0 bg-green-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white flex items-center gap-1"><Tv size={10} /> {t('ui_ad')}</div>
                   <div className="flex items-center gap-3 relative z-10">
                      <div className="bg-black/30 p-2 rounded-lg"><Tv className="text-green-400" size={24} /></div>
                      <div>
-                       <h3 className="font-bold text-white text-sm">Денежный Бонус</h3>
-                       <p className="text-xs text-slate-400">Получите ${adRewardMoney.toLocaleString()} в казну моментально.</p>
+                       <h3 className="font-bold text-white text-sm">{t('ui_money_bonus_name')}</h3>
+                       <p className="text-xs text-slate-400">{t('ui_money_bonus_desc', { amount: adRewardMoney.toLocaleString() })}</p>
                      </div>
                   </div>
                   <button onClick={() => { onAdReward('AD_MONEY'); setUpgradesVisible(false); }} className="mt-4 bg-green-600 hover:bg-green-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-green-900/50 flex items-center justify-center gap-1">
-                    <Tv size={12} /> Смотреть рекламу — Получить +${adRewardMoney.toLocaleString()}
+                     <Tv size={12} /> {t('ui_watch_get_money', { amount: adRewardMoney.toLocaleString() })}
                   </button>
                </div>
                
                <div className="bg-slate-800/80 p-4 rounded-xl border border-yellow-700/50 flex flex-col justify-between col-span-1 md:col-span-2 relative overflow-hidden">
-                   <div className="absolute top-0 right-0 bg-yellow-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white flex items-center gap-1"><Tv size={10} /> Реклама</div>
+                   <div className="absolute top-0 right-0 bg-yellow-600 text-[9px] uppercase font-bold px-2 py-0.5 rounded-bl-lg text-white flex items-center gap-1"><Tv size={10} /> {t('ui_ad')}</div>
                    <div className="flex items-center gap-3 relative z-10">
                      <div className="bg-black/30 p-2 rounded-lg"><Zap className="text-yellow-400" size={24} /></div>
                      <div>
-                       <h3 className="font-bold text-white text-sm">Золотая Лихорадка!</h3>
-                       <p className="text-xs text-slate-400">Удвойте весь доход города на 3 минуты.</p>
+                       <h3 className="font-bold text-white text-sm">{t('ui_gold_rush_name')}</h3>
+                       <p className="text-xs text-slate-400">{t('ui_gold_rush_desc')}</p>
                      </div>
                   </div>
                   <button onClick={() => { onAdReward('TAX_BOOST'); setUpgradesVisible(false); }} disabled={(stats.taxBoostExpiresAt ?? 0) > Date.now()} className="mt-4 bg-yellow-600 hover:bg-yellow-500 text-white text-xs py-2 rounded-lg font-bold shadow-lg shadow-yellow-900/50 disabled:opacity-50 flex items-center justify-center gap-1">
-                    <Tv size={12} /> Смотреть рекламу — Активировать
+                     <Tv size={12} /> {t('ui_watch_activate')}
                   </button>
                </div>
             </div>
@@ -562,16 +555,16 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
       {adPopupVisible && stats.tutorialCompleted && (
         <div id="ad-popup-container" className="ad-popup-responsive absolute left-2 bottom-[8.5rem] md:left-auto md:bottom-auto md:top-24 md:right-4 pointer-events-auto animate-bounce z-40 max-w-[calc(100vw-7rem)] md:max-w-[calc(100vw-16px)]">
            <div className="bg-gradient-to-br from-yellow-500 to-orange-600 p-4 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.4)] border border-yellow-300 w-64 max-w-full">
-              <button onClick={() => setAdPopupVisible(false)} className="absolute top-1 right-1 text-yellow-100 hover:text-white"><X size={16}/></button>
+              <button onClick={() => setAdPopupVisible(false)} aria-label={t('ui_close')} className="absolute top-1 right-1 text-yellow-100 hover:text-white"><X size={16}/></button>
               <div className="flex gap-3 items-center">
                  <div className="bg-white/20 p-2 rounded-full"><Zap className="text-yellow-100" /></div>
                  <div>
-                    <h3 className="text-white font-bold text-sm leading-tight">Доступен бонус!</h3>
-                    <p className="text-yellow-100 text-[10px] mt-1 leading-tight">Нажмите, чтобы получить солидный буст.</p>
+                     <h3 className="text-white font-bold text-sm leading-tight">{t('ui_bonus_available')}</h3>
+                     <p className="text-yellow-100 text-[10px] mt-1 leading-tight">{t('ui_bonus_available_desc')}</p>
                  </div>
               </div>
               <button onClick={() => { setAdPopupVisible(false); setUpgradesVisible(true); }} className="w-full mt-3 bg-white text-orange-600 hover:bg-yellow-50 font-bold py-1.5 rounded-lg text-xs shadow-md">
-                 Открыть Улучшения
+                  {t('ui_open_upgrades')}
               </button>
            </div>
         </div>
@@ -582,21 +575,21 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
         <div className="absolute inset-0 bg-black/60 z-[100] flex items-center justify-center animate-fade-in backdrop-blur-sm pointer-events-auto overflow-y-auto p-4">
            <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl shadow-2xl max-w-xs w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-2">
-                 <h2 className="text-xl font-black text-white flex items-center gap-2"><Settings className="text-gray-400" size={20}/> Настройки</h2>
-                 <button onClick={() => setSettingsVisible(false)} className="text-slate-400 hover:text-white"><X /></button>
+                 <h2 className="text-xl font-black text-white flex items-center gap-2"><Settings className="text-gray-400" size={20}/> {t('ui_settings')}</h2>
+                 <button onClick={() => setSettingsVisible(false)} aria-label={t('ui_close')} className="text-slate-400 hover:text-white"><X /></button>
               </div>
               <div className="space-y-6">
                  <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Громкость музыки ({volume}%)</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">{t('ui_music_volume', { volume })}</label>
                     <input type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-full accent-indigo-500" />
                  </div>
                  <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Звуковые эффекты ({sfxVolume}%)</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">{t('ui_sfx_volume', { volume: sfxVolume })}</label>
                     <input type="range" min="0" max="100" value={sfxVolume} onChange={(e) => setSfxVolume(Number(e.target.value))} className="w-full accent-indigo-500" />
                  </div>
 
                  <div className="flex items-center justify-between mt-4">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ночной режим</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('ui_night_mode')}</label>
                     <button 
                         onClick={() => onToggleNightMode && onToggleNightMode()}
                         className={`w-12 h-6 rounded-full transition-colors relative ${isNightMode ? 'bg-indigo-500' : 'bg-slate-700'}`}
@@ -613,8 +606,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                      <BookOpen size={19} />
                    </span>
                    <span className="min-w-0">
-                     <span className="block text-sm font-black text-white">Гайд по управлению</span>
-                     <span className="block text-[10px] leading-relaxed text-slate-400">Мышь, тачпад и сенсорный экран</span>
+                     <span className="block text-sm font-black text-white">{t('guide_title')}</span>
+                     <span className="block text-[10px] leading-relaxed text-slate-400">{t('guide_devices')}</span>
                    </span>
                  </button>
 
@@ -627,17 +620,17 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                        }} 
                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-sm transition-colors"
                      >
-                        Пройти обучение заново
+                        {t('ui_restart_tutorial')}
                      </button>
                      
                      <button onClick={() => void onResetProgress?.()} className="w-full border border-red-500/50 hover:bg-red-500/20 text-red-400 font-bold py-2 rounded-xl text-sm transition-colors">
-                        Сбросить прогресс
+                         {t('ui_reset_progress')}
                      </button>
-                     <p className="text-[10px] text-center text-slate-500 mt-2">Осторожно, это удалит весь ваш город!</p>
+                     <p className="text-[10px] text-center text-slate-500 mt-2">{t('ui_reset_caution')}</p>
                   </div>
               </div>
               <button onClick={() => setSettingsVisible(false)} className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-sm">
-                 Закрыть
+                  {t('ui_close')}
               </button>
            </div>
         </div>
@@ -652,10 +645,10 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                 <BookOpen size={21} />
               </span>
               <div className="min-w-0 flex-1">
-                <h2 className="text-lg sm:text-2xl font-black text-white leading-tight">Гайд по управлению</h2>
-                <p className="text-[10px] sm:text-xs text-slate-400">Выберите удобный способ и стройте город без лишних движений.</p>
+                 <h2 className="text-lg sm:text-2xl font-black text-white leading-tight">{t('guide_title')}</h2>
+                 <p className="text-[10px] sm:text-xs text-slate-400">{t('guide_intro')}</p>
               </div>
-              <button aria-label="Закрыть гайд" onClick={() => setControlsGuideVisible(false)} className="min-w-11 min-h-11 grid place-items-center rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
+               <button aria-label={t('guide_close')} onClick={() => setControlsGuideVisible(false)} className="min-w-11 min-h-11 grid place-items-center rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
                 <X size={22} />
               </button>
             </div>
@@ -664,50 +657,50 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
               <section className="rounded-2xl border border-indigo-400/25 bg-indigo-500/5 p-4">
                 <div className="flex items-center gap-2 mb-3 text-indigo-300">
                   <MousePointer2 size={19} />
-                  <h3 className="font-black text-white">Мышь</h3>
+                   <h3 className="font-black text-white">{t('guide_mouse')}</h3>
                 </div>
                 <ul className="space-y-2 text-xs text-slate-300 leading-relaxed">
-                  <li><b className="text-white">Левая кнопка + движение</b> — перемещать карту.</li>
-                  <li><b className="text-white">Правая кнопка + движение</b> — вращать камеру.</li>
-                  <li><b className="text-white">Колесо</b> — приближать и отдалять.</li>
-                  <li><b className="text-white">Обычный клик</b> — строить на выбранной клетке.</li>
+                   <li>{t('guide_mouse_pan')}</li>
+                   <li>{t('guide_mouse_rotate')}</li>
+                   <li>{t('guide_mouse_zoom')}</li>
+                   <li>{t('guide_mouse_build')}</li>
                 </ul>
               </section>
 
               <section className="rounded-2xl border border-cyan-400/25 bg-cyan-500/5 p-4">
                 <div className="flex items-center gap-2 mb-3 text-cyan-300">
                   <Laptop size={19} />
-                  <h3 className="font-black text-white">Тачпад</h3>
+                   <h3 className="font-black text-white">{t('guide_trackpad')}</h3>
                 </div>
                 <ul className="space-y-2 text-xs text-slate-300 leading-relaxed">
-                  <li><b className="text-white">Два пальца</b> — плавно перемещать карту.</li>
-                  <li><b className="text-white">Щипок</b> или <b className="text-white">Ctrl + прокрутка</b> — масштаб.</li>
-                  <li><b className="text-white">Правый клик + движение</b> — вращать камеру.</li>
-                  <li><b className="text-white">Кнопки справа</b> — точный поворот и масштаб.</li>
+                   <li>{t('guide_trackpad_pan')}</li>
+                   <li>{t('guide_trackpad_zoom')}</li>
+                   <li>{t('guide_trackpad_rotate')}</li>
+                   <li>{t('guide_trackpad_buttons')}</li>
                 </ul>
               </section>
 
               <section className="rounded-2xl border border-emerald-400/25 bg-emerald-500/5 p-4">
                 <div className="flex items-center gap-2 mb-3 text-emerald-300">
                   <Smartphone size={19} />
-                  <h3 className="font-black text-white">Телефон</h3>
+                   <h3 className="font-black text-white">{t('guide_phone')}</h3>
                 </div>
                 <ul className="space-y-2 text-xs text-slate-300 leading-relaxed">
-                  <li><b className="text-white">Свайп одним пальцем</b> — перемещать карту.</li>
-                  <li><b className="text-white">Короткое касание</b> — построить объект.</li>
-                  <li><b className="text-white">Щипок двумя пальцами</b> — изменить масштаб.</li>
-                  <li><b className="text-white">Поворот двумя пальцами</b> — вращать камеру.</li>
+                   <li>{t('guide_phone_pan')}</li>
+                   <li>{t('guide_phone_build')}</li>
+                   <li>{t('guide_phone_zoom')}</li>
+                   <li>{t('guide_phone_rotate')}</li>
                 </ul>
               </section>
             </div>
 
             <div className="mx-4 sm:mx-6 mb-4 rounded-xl border border-amber-400/20 bg-amber-500/5 p-3 text-[11px] sm:text-xs text-slate-300 leading-relaxed">
-              <b className="text-amber-300">Как строить:</b> выберите здание в нижней панели, затем нажмите на свободную купленную клетку. Зелёная подсветка означает, что строительство разрешено; красная — место занято или недоступно.
+               <b className="text-amber-300">{t('guide_build_title')}</b> {t('guide_build_text')}
             </div>
 
             <div className="sticky bottom-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700 p-4 sm:px-6 flex justify-end">
               <button onClick={() => { setControlsGuideVisible(false); setSettingsVisible(true); }} className="w-full sm:w-auto min-h-12 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white font-black px-6 py-3 rounded-xl shadow-lg transition-transform active:scale-95">
-                Вернуться в настройки
+                 {t('guide_back')}
               </button>
             </div>
           </div>
@@ -723,8 +716,8 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           minWidth={250}
           minHeight={newsMinimized ? 40 : 150}
           bounds="parent"
-          onDragStop={(e, d) => setNewsPos({ x: d.x, y: d.y })}
-          onResize={(e, direction, ref, delta, position) => {
+          onDragStop={(_, d) => setNewsPos({ x: d.x, y: d.y })}
+          onResize={(_, _direction, ref, _delta, position) => {
             setNewsSize({
               width: parseInt(ref.style.width, 10),
               height: parseInt(ref.style.height, 10),
@@ -739,7 +732,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           <div className="w-full h-full bg-black/80 text-white rounded-xl border border-gray-700/80 backdrop-blur-xl flex flex-col overflow-hidden relative">
             <div className="handle-news cursor-move bg-gray-800/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-300 border-b border-gray-600 flex justify-between items-center select-none">
               <div className="flex items-center gap-2">
-                 <span>Новости</span>
+                  <span>{t('ui_news')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button onPointerDown={(e)=>{e.stopPropagation(); setNewsMinimized(!newsMinimized);}} className="hover:bg-white/20 p-1 rounded transition-colors text-white z-50">
@@ -756,7 +749,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
                 <div className="absolute top-8 left-0 right-0 pointer-events-none bg-[linear-gradient(to_bottom,rgba(255,255,255,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-30 z-20 flex-1"></div>
                 
                 <div ref={newsRef} className="flex-1 overflow-y-auto p-2 md:p-3 space-y-2 text-[10px] md:text-xs font-mono scroll-smooth mask-image-b z-10 custom-scrollbar">
-                  {newsFeed.length === 0 && <div className="text-gray-500 italic text-center mt-10">Нет активных новостей.</div>}
+                   {newsFeed.length === 0 && <div className="text-gray-500 italic text-center mt-10">{t('ui_no_news')}</div>}
                   {newsFeed.map((news) => (
                     <div key={news.id} className={`
                       border-l-2 pl-2 py-1 transition-all animate-fade-in leading-tight relative pr-10
@@ -853,7 +846,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
               })}
             </div>
           ) : (
-             <div className="px-6 py-1 text-[10px] font-bold text-gray-400 tracking-widest uppercase">Стройка свернута</div>
+              <div className="px-6 py-1 text-[10px] font-bold text-gray-400 tracking-widest uppercase">{t('ui_toolbar_collapsed')}</div>
           )}
         </div>
       </div>
@@ -864,6 +857,7 @@ const UIOverlay: React.FC<UIOverlayProps & { dynamicCosts?: Record<string, numbe
           onClick={(e) => { e.stopPropagation(); setSettingsVisible(true); }} 
           onPointerDown={(e) => { e.stopPropagation(); setSettingsVisible(true); }}
           className="bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-xl shadow-lg border border-gray-600 transition-colors pointer-events-auto cursor-pointer"
+          aria-label={t('ui_settings')}
         >
           <Settings size={18} />
         </button>
